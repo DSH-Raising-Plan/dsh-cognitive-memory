@@ -39,6 +39,30 @@ async function loadDefineTool() {
   throw new Error('cannot resolve @deepseek-ai/dsh-tools (set DSH_TOOLS_PATH for local dev)');
 }
 
+/** Flatten one user/assistant message content into plain text. */
+function contentText(content) {
+  if (typeof content === 'string') return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => {
+        if (typeof part === 'string') return part;
+        if (part && typeof part === 'object') {
+          const kind = String(part.type || '').toLowerCase();
+          // Never persist hidden reasoning/thinking; only user-visible text.
+          if (/reason|think/.test(kind)) return '';
+          return part.text ?? part.content ?? '';
+        }
+        return '';
+      })
+      .filter(Boolean)
+      .join('\n');
+  }
+  if (content && typeof content === 'object') {
+    return String(content.text ?? content.content ?? '');
+  }
+  return '';
+}
+
 export async function apply(ctx) {
   const defineTool = await loadDefineTool();
   // `config` is optional: headless Cordis profiles provide no config service.
@@ -164,7 +188,93 @@ export async function apply(ctx) {
     }),
   ];
 
+  // Host-level capture: write every user/assistant message into the memory
+  // service without asking the model to call memory_observe. The model may
+  // still call memory_observe for an extra semantic note; this hook is the
+  // baseline that guarantees the turn is not lost.
+  let offSession = null;
+  let offFlush = null;
+  const pendingCaptures = new Set();
+  const latestAssistant = new Map();
+  if (cfg.auto_capture !== false && typeof ctx.on === 'function') {
+    offFlush = ctx.on('session/flush', async () => {
+      // Durability checkpoint: do not let the process exit before the
+      // fire-and-forget observation requests have reached the service.
+      await Promise.allSettled([...pendingCaptures]);
+    });
+    offSession = ctx.on('session/event', (session, event) => {
+      try {
+        const type = event?.type;
+        if (type !== 'user/message' && type !== 'assistant/message' && type !== 'turn/end') return;
+        const sessionId = String(session?.id || session?.header?.id || '');
+        if (!sessionId) return;
+        const data = event.data || {};
+
+        const capture = (role, content, seq, time, source) => {
+          const text = contentText(content).trim();
+          if (!text) return;
+          const occurredAt = new Date(Number(time) || Date.now()).toISOString();
+          const metadata = {
+            session_id: sessionId,
+            event_seq: Number(seq) || 0,
+            role,
+            source: source ?? null,
+          };
+          const task = (async () => {
+            const c = await ensureClient();
+            await c.observe({
+              content: text,
+              source_kind: 'dialog',
+              producer: 'dsh.host',
+              correlation_id: sessionId,
+              occurred_at: occurredAt,
+              metadata,
+              idempotency_key: `dsh:${sessionId}:${Number(seq) || 0}`,
+            });
+          })().catch((err) => {
+            if (process.env.DSH_MEMORY_DEBUG) {
+              process.stderr.write(`[cognitive-memory] auto-capture skipped: ${err}\n`);
+            }
+          });
+          pendingCaptures.add(task);
+          task.finally(() => pendingCaptures.delete(task));
+        };
+
+        if (type === 'user/message') {
+          if (!data || data.role !== 'user') return;
+          capture('user', data.content, event.seq, event.time, data.source);
+          return;
+        }
+        if (type === 'assistant/message') {
+          const message = data.message;
+          if (!message || message.role !== 'assistant') return;
+          // Keep only the last assistant message of the turn; intermediate
+          // steps are tool-call/reasoning traffic. Persist at turn/end.
+          latestAssistant.set(sessionId, {
+            content: message.content,
+            seq: event.seq,
+            time: event.time,
+            source: message.source,
+          });
+          return;
+        }
+        // turn/end: flush the final visible answer, not the thinking stream.
+        const last = latestAssistant.get(sessionId);
+        latestAssistant.delete(sessionId);
+        if (last) {
+          capture('assistant', last.content, last.seq, last.time, last.source);
+        }
+      } catch (err) {
+        if (process.env.DSH_MEMORY_DEBUG) {
+          process.stderr.write(`[cognitive-memory] auto-capture ignored: ${err}\n`);
+        }
+      }
+    });
+  }
+
   const disposers = tools.map((t) => ctx.tools.register(t));
+  if (offSession) disposers.push(offSession);
+  if (offFlush) disposers.push(offFlush);
   return () => {
     for (const d of disposers.reverse()) d?.();
     host.stop();

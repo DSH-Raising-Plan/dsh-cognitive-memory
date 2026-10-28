@@ -476,7 +476,9 @@ class MemoryService:
                 rows = conn.execute(
                     sql, (fts_q, *statuses, *types, limit)
                 ).fetchall()
-            except sqlite3.OperationalError:
+            except (sqlite3.OperationalError, SystemError):
+                # Some Python/SQLite builds raise SystemError for a NULL FTS
+                # result instead of an sqlite3 error; degrade to LIKE either way.
                 rows = []
             if not rows:
                 # 降级：LIKE

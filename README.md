@@ -7,9 +7,9 @@ DeepSeek Harness **认知记忆**插件：拉起外置 **cognitive-memory** 子�
 > 社区插件，与 DeepSeek 官方无关。  
 > 英文简版：[README.en.md](./README.en.md)
 
-配套 Python 服务（逻辑本体）通常位于 monorepo 的 `services/cognitive-memory`；本仓库是 **Host Adapter**（子进程管理 + DSH tools）。
+本仓库为 **完整包**：根目录是 DSH Host Adapter；[`service/`](./service) 为 Python 认知记忆服务；[`docs/`](./docs) 为规格与排期。也可在桌宠 monorepo 中与 `services/cognitive-memory` 联调。
 
-算法优化清单与排期：[ROADMAP.md](./ROADMAP.md)
+算法优化清单与排期：[ROADMAP.md](./ROADMAP.md) · 状态机：[docs/COGNITIVE_MEMORY_STATE_MACHINE.md](./docs/COGNITIVE_MEMORY_STATE_MACHINE.md)
 
 ### 核心链路
 
@@ -169,15 +169,13 @@ DeepSeek Harness **认知记忆**插件：拉起外置 **cognitive-memory** 子�
 ```
 dsh-cognitive-memory/
 ├── dsh.plugin.json       # DSH 插件清单（inject: tools）
-├── cordis.patch.yml      # 安装时插入 Harness 插件列表
-├── package.json          # ESM · peer dsh-tools
-├── src/
-│   ├── index.js          # Cordis 入口：拉起进程、注册 tools
-│   ├── memory-process.js # MemoryProcessHost（子进程生命周期）
-│   ├── memory-client.js  # REST 客户端（Bearer Token）
-│   └── tool-spec.js      # 工具 schema（与 execute 分离）
-├── README.md             # 本文件（愿景 + 插件说明）
-├── README.en.md
+├── cordis.patch.yml
+├── package.json
+├── src/                  # Host Adapter
+├── service/              # Python cognitive-memory（MemoryService）
+├── docs/                 # SPEC · ROADMAP · STATE_MACHINE
+├── ROADMAP.md
+├── README.md
 └── LICENSE
 ```
 
@@ -211,14 +209,18 @@ dsh-cognitive-memory/
 
 ## 安装
 
-需本机 Python ≥ 3.11，并安装外置服务包（monorepo 内示例）：
+需本机 Python ≥ 3.11：
 
 ```bash
-pip install -e ../../services/cognitive-memory
+# 克隆本仓库后安装服务依赖（本仓库已内含 service/）
+pip install -e ./service
+# 或仅装依赖后由插件用 PYTHONPATH 拉起
+pip install -e "./service[dev]"
+
 dsh plugin --profile web add github:DSH-Raising-Plan/dsh-cognitive-memory#plugin/dsh
 ```
 
-本地开发可将插件路径指到本目录；服务根目录默认识别 monorepo 的 `services/cognitive-memory`，也可用配置显式指定 `service_root`。
+插件默认优先使用仓库内 `service/`；也可设 `DSH_COGNITIVE_MEMORY_ROOT` / cordis `service_root` 指向其它检出路径。
 
 ---
 

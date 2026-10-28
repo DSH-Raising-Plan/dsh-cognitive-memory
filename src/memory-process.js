@@ -14,6 +14,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 function defaultServiceRoot() {
   const env = process.env.DSH_COGNITIVE_MEMORY_ROOT;
   if (env) return path.resolve(env);
+  // published repo: dsh-cognitive-memory/service
+  const bundled = path.resolve(__dirname, '../service');
+  if (fs.existsSync(path.join(bundled, 'src', 'cognitive_memory', 'main.py'))) {
+    return bundled;
+  }
   // monorepo: _dsh_plugins/dsh-cognitive-memory/src → ../../../services/cognitive-memory
   return path.resolve(__dirname, '../../../services/cognitive-memory');
 }

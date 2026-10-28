@@ -34,6 +34,11 @@ test('apply() registers all tools without a config service', async () => {
       },
     },
   };
+  Object.defineProperty(ctx, 'config', {
+    get() {
+      throw new Error('cannot get property "config" without inject');
+    },
+  });
 
   const dispose = await apply(ctx);
   assert.deepEqual(registered.map((t) => t.name), TOOLS);

@@ -41,7 +41,12 @@ async function loadDefineTool() {
 
 export async function apply(ctx) {
   const defineTool = await loadDefineTool();
-  const cfg = ctx?.config?.['dsh-cognitive-memory'] || {};
+  // `config` is optional: headless Cordis profiles provide no config service.
+  let rootConfig = {};
+  try {
+    rootConfig = (typeof ctx.get === 'function' ? ctx.get('config') : null) || {};
+  } catch { rootConfig = {}; }
+  const cfg = rootConfig['dsh-cognitive-memory'] || {};
   const autoStart = cfg.auto_start !== false;
 
   const host = new MemoryProcessHost({
@@ -67,11 +72,6 @@ export async function apply(ctx) {
     client = new MemoryClient({ baseUrl: info.baseUrl, token: info.token });
     return client;
   }
-
-  ctx.cognitiveMemory = {
-    host,
-    async client() { return ensureClient(); },
-  };
 
   const tools = [
     defineTool({
@@ -168,6 +168,5 @@ export async function apply(ctx) {
   return () => {
     for (const d of disposers.reverse()) d?.();
     host.stop();
-    delete ctx.cognitiveMemory;
   };
 }

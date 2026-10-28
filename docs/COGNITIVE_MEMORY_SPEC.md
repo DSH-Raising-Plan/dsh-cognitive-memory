@@ -1,7 +1,7 @@
 # DSH 外置认知记忆系统 — 总体技术方案（落地索引）
 
 > 架构版本 **V1.0** · 代码位置：`services/cognitive-memory` + `_dsh_plugins/dsh-cognitive-memory`  
-> 目标：**完全代替** 进程内 A-MEM（`Murasame/a_mem_bridge.py` + Chroma）。
+> 目标：独立可替换的外置记忆服务；**当前默认副记忆**，与 A-MEM 并行试用，转正门槛见插件 [TRIAL.md](../_dsh_plugins/dsh-cognitive-memory/TRIAL.md)（零配置启动、对话闭环、备份迁移、CI、一周无丢数据）。
 
 本文是立项与开发拆分的**落地索引**；原则与接口以实现代码与 OpenAPI 为准。
 
@@ -59,18 +59,21 @@ docs/COGNITIVE_MEMORY_STATE_MACHINE.md  # 状态机规格草案
 | 12 兴趣证据分层与晋升（P2） | ⏳ |
 | 13 空闲巩固与算法实验（P3） | ⏳ |
 
-## 桌宠接入（已落地）
+## 桌宠接入（已落地 · 默认副记忆）
 
 1. `Murasame/cognitive_memory_bridge.py`：HTTP 客户端，可 `auto_start` 拉起子进程。
-2. `memory_orchestrator`：默认 retrieval/persist 首位为 `cognitive_memory`；`replace_a_mem=true` 时跳过 A-MEM 读写。
-3. `gatekeeper_memory`：优先 `contexts/build`；无命中/未启用时才回退 A-MEM。
-4. `config.json` / `config.example.json`：`cognitive_memory.enable=true`，`a_mem.enable=false`。
+2. `memory_orchestrator`：可把 `cognitive_memory` 放进 retrieval/persist；**仅当 `replace_a_mem=true` 时跳过 A-MEM**（默认 `false`）。
+3. `gatekeeper_memory`：启用时优先 `contexts/build`；无命中/未启用时回退 A-MEM。
+4. `config.example.json`：`cognitive_memory.enable=true`，`replace_a_mem=false`；勿在试用期关掉 A-MEM。
 5. 管理后台「外置认知记忆」面板：`/api/cognitive-memory/*`。
-6. 运维：`python -m cognitive_memory.cli backup|restore|migrate-amem`。
+6. 运维：`python -m cognitive_memory.cli backup|restore|migrate-amem`（日备脚本见插件 `scripts/backup-daily.ps1`）。
+
+**尚未验收（不能当主记忆的原因）：** 真实对话 `observe → 下一轮自动 context`；安装进 DSH profile 后零配置启动的现场验证；连续一周无丢/串记忆；端到端 CI。
 
 ## 相关文档
 
 - 现状记忆总图（含 A-MEM）：[MEMORY_MAP.md](./MEMORY_MAP.md)
 - 算法优化与借鉴：[COGNITIVE_MEMORY_ROADMAP.md](./COGNITIVE_MEMORY_ROADMAP.md)
 - 状态机与证据规范：[COGNITIVE_MEMORY_STATE_MACHINE.md](./COGNITIVE_MEMORY_STATE_MACHINE.md)
-- A-MEM 标记为 **deprecated**，新写入已切到本服务。
+- 试用 / 转正：[TRIAL.md](../_dsh_plugins/dsh-cognitive-memory/TRIAL.md)
+- A-MEM 仍为 **并行主线之一**；外置服务转正前勿标记为已废弃。

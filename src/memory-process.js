@@ -11,17 +11,62 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-function defaultServiceRoot() {
-  const env = process.env.DSH_COGNITIVE_MEMORY_ROOT;
-  if (env) return path.resolve(env);
-  // published repo: dsh-cognitive-memory/service
-  const bundled = path.resolve(__dirname, '../service');
-  if (fs.existsSync(path.join(bundled, 'src', 'cognitive_memory', 'main.py'))) {
-    return bundled;
-  }
-  // monorepo: _dsh_plugins/dsh-cognitive-memory/src → ../../../services/cognitive-memory
-  return path.resolve(__dirname, '../../../services/cognitive-memory');
+function isServiceRoot(root) {
+  return Boolean(root)
+    && fs.existsSync(path.join(root, 'src', 'cognitive_memory', 'main.py'));
 }
+
+/** Walk candidates so DSH profile installs work without env/config. */
+function resolveServiceRoot(explicit) {
+  const tried = [];
+  const push = (p) => {
+    if (!p) return;
+    const abs = path.resolve(p);
+    if (!tried.includes(abs)) tried.push(abs);
+  };
+
+  if (explicit) push(explicit);
+  if (process.env.DSH_COGNITIVE_MEMORY_ROOT) {
+    push(process.env.DSH_COGNITIVE_MEMORY_ROOT);
+  }
+
+  // package root = …/dsh-cognitive-memory (Host Adapter next to service/)
+  push(path.join(__dirname, '..', 'service'));
+  push(path.join(__dirname, '..', '..', 'service'));
+
+  // walk up a few levels (node_modules nesting / profile copies)
+  let cur = path.resolve(__dirname);
+  for (let i = 0; i < 8; i += 1) {
+    push(path.join(cur, 'service'));
+    push(path.join(cur, 'services', 'cognitive-memory'));
+    const parent = path.dirname(cur);
+    if (parent === cur) break;
+    cur = parent;
+  }
+
+  // monorepo fallback (desktop pet checkout)
+  push(path.join(__dirname, '..', '..', '..', 'services', 'cognitive-memory'));
+
+  for (const root of tried) {
+    if (isServiceRoot(root)) return root;
+  }
+
+  const hint = [
+    'cognitive-memory Python service not found.',
+    'Tried:',
+    ...tried.map((p) => `  - ${p}`),
+    'Fix: keep repo `service/` next to the plugin, or set',
+    '  DSH_COGNITIVE_MEMORY_ROOT / config.service_root',
+    'then: pip install -e "<that-path>" (optional; PYTHONPATH also works).',
+  ].join('\n');
+  throw new Error(hint);
+}
+
+function defaultServiceRoot() {
+  return resolveServiceRoot(undefined);
+}
+
+export { resolveServiceRoot, isServiceRoot };
 
 function defaultDataDir() {
   if (process.env.DSH_MEMORY_DATA_DIR) return process.env.DSH_MEMORY_DATA_DIR;
@@ -40,7 +85,11 @@ export class MemoryProcessHost {
    * @param {{ serviceRoot?: string, dataDir?: string, python?: string, token?: string }} [opts]
    */
   constructor(opts = {}) {
-    this.serviceRoot = opts.serviceRoot || defaultServiceRoot();
+    // Defer resolve until start() so missing service fails with a full path list.
+    this._serviceRootOpt = opts.serviceRoot || '';
+    this.serviceRoot = this._serviceRootOpt
+      ? path.resolve(this._serviceRootOpt)
+      : '';
     this.dataDir = opts.dataDir || defaultDataDir();
     this.python = opts.python || pythonBin();
     this.token = opts.token || process.env.DSH_MEMORY_TOKEN || '';
@@ -59,6 +108,8 @@ export class MemoryProcessHost {
 
   async start({ timeoutMs = 20000 } = {}) {
     if (this.child && !this.child.killed) return this.info();
+
+    this.serviceRoot = resolveServiceRoot(this._serviceRootOpt || undefined);
 
     if (!this.token) {
       this.token = Buffer.from(cryptoGetRandom()).toString('base64url');

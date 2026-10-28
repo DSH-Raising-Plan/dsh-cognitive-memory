@@ -2,10 +2,11 @@
 
 DeepSeek Harness **认知记忆**插件：拉起外置 **cognitive-memory** 子进程，用 REST 暴露检索 / 上下文 / 观察 / 反馈工具。
 
-**替代**旧 A-MEM（Chroma 进程内向量库）方案。面向 DeepSeek Harness / **丛雨桌宠（DSH）**。
+面向 DeepSeek Harness / **丛雨桌宠（DSH）**。当前默认当 **副记忆（与 A-MEM 并行）**，不建议一上来就关掉旧记忆。
 
 > 社区插件，与 DeepSeek 官方无关。  
-> 英文简版：[README.en.md](./README.en.md)
+> 英文简版：[README.en.md](./README.en.md)  
+> **试用立场与转正门槛**：[TRIAL.md](./TRIAL.md)
 
 本仓库为 **完整包**：根目录是 DSH Host Adapter；[`service/`](./service) 为 Python 认知记忆服务；[`docs/`](./docs) 为规格与排期。也可在桌宠 monorepo 中与 `services/cognitive-memory` 联调。
 
@@ -209,18 +210,28 @@ dsh-cognitive-memory/
 
 ## 安装
 
-需本机 Python ≥ 3.11：
+需本机 Python ≥ 3.11。仓库 **必须带 `service/`**（完整包）；Host Adapter 会向上查找 `service/src/cognitive_memory/main.py`，**不再依赖** monorepo 的 `../../../services/cognitive-memory` 才能起。
 
 ```bash
-# 克隆本仓库后安装服务依赖（本仓库已内含 service/）
+# 建议：本地克隆完整仓库再装（保证 service/ 在插件旁）
+git clone -b plugin/dsh https://github.com/DSH-Raising-Plan/dsh-cognitive-memory.git
+cd dsh-cognitive-memory
 pip install -e ./service
-# 或仅装依赖后由插件用 PYTHONPATH 拉起
-pip install -e "./service[dev]"
-
-dsh plugin --profile web add github:DSH-Raising-Plan/dsh-cognitive-memory#plugin/dsh
+dsh plugin --profile web add ./   # 或 add github:...#plugin/dsh 后确认安装目录里仍有 service/
 ```
 
-插件默认优先使用仓库内 `service/`；也可设 `DSH_COGNITIVE_MEMORY_ROOT` / cordis `service_root` 指向其它检出路径。
+若 `dsh plugin add github:...` 后启动报「Python service not found」，说明安装树没带上 `service/`：改用本地路径安装，或设 `DSH_COGNITIVE_MEMORY_ROOT` / `service_root`。
+
+桌宠侧默认 **`replace_a_mem: false`**（副记忆并行）。见 [TRIAL.md](./TRIAL.md)。
+
+### 备份 / 迁移
+
+```bash
+python -m cognitive_memory.cli backup
+python -m cognitive_memory.cli restore path/to/memory-….db --force
+python -m cognitive_memory.cli migrate-amem --jsonl export.jsonl
+# Windows 日备：pwsh scripts/backup-daily.ps1
+```
 
 ---
 

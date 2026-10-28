@@ -7,7 +7,7 @@ DeepSeek Harness **cognitive memory** plugin: starts an external **cognitive-mem
 > Community plugin. Not affiliated with DeepSeek.  
 > Full Chinese docs: [README.md](./README.md) · Algorithm roadmap: [ROADMAP.md](./ROADMAP.md)
 
-This repo is the **full package**: Host Adapter at repo root, Python service under [`service/`](./service), specs under [`docs/`](./docs). Default `service_root` prefers `./service`.
+This repo is the **full package**: Host Adapter at repo root, Python service under [`service/`](./service), specs under [`docs/`](./docs). Default resolve walks for `./service` (no monorepo path required). **Trial stance: secondary memory** — see [TRIAL.md](./TRIAL.md); do not set `replace_a_mem` until promotion gates pass.
 
 **Core chain:** `event → buffer → link → episode → pattern → filter → long-term → user model`  
 **Video:** `runStoryboard → segments → topics → temp memory → cross-source interest → long-term`  

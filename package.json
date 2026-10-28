@@ -1,0 +1,43 @@
+{
+  "name": "dsh-cognitive-memory",
+  "version": "0.1.0",
+  "description": "DeepSeek Harness 认知记忆插件：拉起外置 Memory Service 子进程，暴露检索/上下文/反馈工具",
+  "keywords": ["dsh", "dsh-plugin", "deepseek-harness", "memory", "cognitive-memory"],
+  "homepage": "https://github.com/DSH-Raising-Plan/dsh-cognitive-memory#readme",
+  "bugs": { "url": "https://github.com/DSH-Raising-Plan/dsh-cognitive-memory/issues" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DSH-Raising-Plan/dsh-cognitive-memory.git"
+  },
+  "author": "canyueY",
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./client": "./src/memory-client.js",
+    "./tool-spec": "./src/tool-spec.js"
+  },
+  "files": [
+    "src",
+    "cordis.patch.yml",
+    "dsh.plugin.json",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check src/index.js && node --check src/memory-client.js && node --check src/memory-process.js && node --check src/tool-spec.js"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-tools": ">=0.1.0-rc.7"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-tools": { "optional": true }
+  },
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" }
+  }
+}

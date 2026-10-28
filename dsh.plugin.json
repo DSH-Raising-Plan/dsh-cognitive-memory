@@ -1,0 +1,9 @@
+{
+  "name": "dsh-cognitive-memory",
+  "description": "DeepSeek Harness 认知记忆：外置子进程 Memory Service（替代 A-MEM）",
+  "version": "0.1.0",
+  "entry": {
+    "name": "dsh-cognitive-memory",
+    "inject": ["tools"]
+  }
+}

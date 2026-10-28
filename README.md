@@ -4,6 +4,8 @@ DeepSeek Harness **认知记忆**插件：拉起外置 [cognitive-memory](../../
 
 **替代**旧 A-MEM（Chroma 进程内向量库）方案。
 
+> 英文简版：[README.en.md](./README.en.md)
+
 ## 安装
 
 需本机 Python ≥ 3.11，并安装服务依赖：

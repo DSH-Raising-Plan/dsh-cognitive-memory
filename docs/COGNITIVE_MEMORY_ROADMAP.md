@@ -1,7 +1,7 @@
-﻿# DSH / MurasamePet：记忆链算法优化清单与可借鉴项目
+# DSH / MurasamePet：记忆链算法优化清单与可借鉴项目
 
 > 用途：后续架构设计与开发排期。  
-> 愿景与拟人化价值见 [`../service/README.md`](../service/README.md)。  
+> 愿景与拟人化价值见 [`../services/cognitive-memory/README.md`](../services/cognitive-memory/README.md)。  
 > 落地索引见 [`COGNITIVE_MEMORY_SPEC.md`](./COGNITIVE_MEMORY_SPEC.md)。  
 > 状态机与证据规则规格见 [`COGNITIVE_MEMORY_STATE_MACHINE.md`](./COGNITIVE_MEMORY_STATE_MACHINE.md)。
 
@@ -257,4 +257,3 @@ flowchart TD
 **最终建议：** 先不要装齐所有项目。Graphiti 做时间知识图谱，SQLite 做可靠性与原始证据，借鉴 Cognee 改善流程、Mem0 轻量基线、Letta 空闲整理思想，**心理学记忆链作为核心业务层**。
 
 下一步可交付文档：[`COGNITIVE_MEMORY_STATE_MACHINE.md`](./COGNITIVE_MEMORY_STATE_MACHINE.md)（状态、转移条件、证据类型、冲突、衰减、可重放日志、验收测试）。
-

@@ -1,11 +1,11 @@
-﻿# cognitive-memory · DSH 外置认知记忆服务
+# cognitive-memory · DSH 外置认知记忆服务
 
 面向 DeepSeek Harness / **丛雨桌宠（DSH）** 的独立认知记忆子进程。完全替代进程内 A-MEM：观察可追溯、推断与事实分离、长期记忆有证据、异步任务可恢复。
 
-落地索引：[`../docs/COGNITIVE_MEMORY_SPEC.md`](../docs/COGNITIVE_MEMORY_SPEC.md)  
-优化清单与排期：[`../docs/COGNITIVE_MEMORY_ROADMAP.md`](../docs/COGNITIVE_MEMORY_ROADMAP.md)  
-状态机与证据规范：[`../docs/COGNITIVE_MEMORY_STATE_MACHINE.md`](../docs/COGNITIVE_MEMORY_STATE_MACHINE.md)  
-DSH 插件：仓库根目录（Host Adapter）
+落地索引：[`docs/COGNITIVE_MEMORY_SPEC.md`](../docs/COGNITIVE_MEMORY_SPEC.md)  
+优化清单与排期：[`docs/COGNITIVE_MEMORY_ROADMAP.md`](../docs/COGNITIVE_MEMORY_ROADMAP.md)  
+状态机与证据规范：[`docs/COGNITIVE_MEMORY_STATE_MACHINE.md`](../docs/COGNITIVE_MEMORY_STATE_MACHINE.md)  
+DSH 插件：[`dsh-cognitive-memory`](../../_dsh_plugins/dsh-cognitive-memory)
 
 ### 核心链路
 
@@ -242,4 +242,3 @@ pytest -q
 ## 许可
 
 AGPL-3.0-or-later
-

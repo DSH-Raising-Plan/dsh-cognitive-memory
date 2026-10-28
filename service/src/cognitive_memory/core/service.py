@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from datetime import datetime, timezone
 from typing import Any
@@ -39,6 +40,35 @@ def _loads(s: str | None, default: Any) -> Any:
         return json.loads(s)
     except json.JSONDecodeError:
         return default
+
+
+_CJK_RE = re.compile(r"[\u4e00-\u9fff]")
+_QUERY_SPLIT_RE = re.compile(r"[\s,，。.!！?？;；:：/\\|]+")
+
+
+def _query_terms(query: str, *, max_terms: int = 12) -> list[str]:
+    """Chinese has no spaces; derive 2-char shingles for LIKE fallback."""
+    terms: list[str] = []
+    for token in _QUERY_SPLIT_RE.split(query or ""):
+        token = token.strip()
+        if not token:
+            continue
+        if _CJK_RE.search(token):
+            if len(token) <= 2:
+                terms.append(token)
+            else:
+                terms.extend(token[i:i + 2] for i in range(len(token) - 1))
+        else:
+            terms.append(token)
+    seen: set[str] = set()
+    out: list[str] = []
+    for term in terms:
+        if term not in seen:
+            seen.add(term)
+            out.append(term)
+        if len(out) >= max_terms:
+            break
+    return out
 
 
 class ConflictError(Exception):
@@ -462,6 +492,22 @@ class MemoryService:
                     """,
                     (like, *statuses, *types, limit),
                 ).fetchall()
+                if not rows:
+                    # 中文没有空格：整句 FTS/LIKE 都命中不了时，用 2 字滑窗再试一次
+                    terms = _query_terms(query)
+                    if terms:
+                        likes = " OR ".join(["content LIKE ?"] * len(terms))
+                        rows = conn.execute(
+                            f"""
+                            SELECT * FROM memories
+                            WHERE ({likes})
+                              AND status IN ({",".join("?" * len(statuses))})
+                              AND type IN ({",".join("?" * len(types))})
+                            ORDER BY updated_at DESC
+                            LIMIT ?
+                            """,
+                            (*[f"%{t}%" for t in terms], *statuses, *types, limit),
+                        ).fetchall()
         else:
             rows = conn.execute(
                 f"""

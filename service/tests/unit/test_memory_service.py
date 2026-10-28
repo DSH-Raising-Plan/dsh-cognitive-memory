@@ -78,6 +78,19 @@ class MemoryServiceTests(unittest.TestCase):
         found = self.svc.search(SearchQuery(query="香菜"))
         self.assertTrue(len(found) >= 1)
 
+    def test_context_natural_language_query_matches_observation(self) -> None:
+        self.svc.capture_observation(
+            ObservationIn(
+                source_kind=SourceKind.DIALOG,
+                content="用户说他喜欢听夜航星",
+            )
+        )
+        ctx = self.svc.build_context(
+            ContextBuildIn(query="用户喜欢什么歌", token_budget=500)
+        )
+        self.assertTrue(ctx.fragments, "自然语言问句应能召回刚写入的观察")
+        self.assertTrue(any("夜航星" in f["content"] for f in ctx.fragments))
+
     def test_context_and_feedback_invalidate(self) -> None:
         mem = self.svc.propose_memory(
             MemoryProposeIn(

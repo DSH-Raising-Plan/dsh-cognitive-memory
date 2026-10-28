@@ -1,4 +1,4 @@
-﻿# DSH 外置认知记忆系统 — 总体技术方案（落地索引）
+# DSH 外置认知记忆系统 — 总体技术方案（落地索引）
 
 > 架构版本 **V1.0** · 代码位置：`services/cognitive-memory` + `_dsh_plugins/dsh-cognitive-memory`  
 > 目标：**完全代替** 进程内 A-MEM（`Murasame/a_mem_bridge.py` + Chroma）。
@@ -9,7 +9,7 @@
 
 | 文档 | 内容 |
 | --- | --- |
-| [`../service/README.md`](../service/README.md) | 愿景、拟人化价值、结构选型 |
+| [`../services/cognitive-memory/README.md`](../services/cognitive-memory/README.md) | 愿景、拟人化价值、结构选型 |
 | [`COGNITIVE_MEMORY_ROADMAP.md`](./COGNITIVE_MEMORY_ROADMAP.md) | 算法优化清单、借鉴项目、P0–P3 排期 |
 | [`COGNITIVE_MEMORY_STATE_MACHINE.md`](./COGNITIVE_MEMORY_STATE_MACHINE.md) | 状态机、证据分层、冲突/衰减、验收测试 |
 
@@ -33,7 +33,7 @@
 
 ```
 services/cognitive-memory/          # Python FastAPI + SQLite 服务
-(本仓库根)  # Node Host Adapter（子进程 + DSH tools）
+_dsh_plugins/dsh-cognitive-memory/  # Node Host Adapter（子进程 + DSH tools）
 docs/COGNITIVE_MEMORY_SPEC.md       # 本索引
 docs/COGNITIVE_MEMORY_ROADMAP.md    # 优化清单与排期
 docs/COGNITIVE_MEMORY_STATE_MACHINE.md  # 状态机规格草案
@@ -74,4 +74,3 @@ docs/COGNITIVE_MEMORY_STATE_MACHINE.md  # 状态机规格草案
 - 算法优化与借鉴：[COGNITIVE_MEMORY_ROADMAP.md](./COGNITIVE_MEMORY_ROADMAP.md)
 - 状态机与证据规范：[COGNITIVE_MEMORY_STATE_MACHINE.md](./COGNITIVE_MEMORY_STATE_MACHINE.md)
 - A-MEM 标记为 **deprecated**，新写入已切到本服务。
-

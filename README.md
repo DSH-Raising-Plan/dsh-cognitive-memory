@@ -266,6 +266,34 @@ dsh-cognitive-memory:
 
 ---
 
+## 测试与验证
+
+截至 **2026-10-28**，`main` 上 CI（plugin + service）全绿。
+
+### 自动测试
+
+| 套件 | 数量 | 覆盖 | 耗时 |
+| --- | ---: | --- | ---: |
+| 插件 `node --test` | 4 | host-contract（无 config 服务 / 抛异常）、零配置 service 路径、stale `service.json` 清理 | 0.52s |
+| 服务 `unittest` | 6 | 观察幂等、版本冲突、自然语言召回、FTS `SystemError` 降级、反馈失效、outbox | 0.18s |
+| 服务恢复测试 | 1 | 重启后 pending outbox 恢复 | 0.04s |
+| **合计** | **11** | 本地 + Ubuntu CI（Node 20 / Python 3.12） | **~0.74s** |
+
+CI 单次运行 16–20s；自动测试不调用模型，**金额 $0**。
+
+### 真实模型闭环
+
+| 场景 | 步数 / 工具调用 | 耗时 | 金额（off-peak） |
+| --- | ---: | ---: | ---: |
+| 跨 session 记忆闭环 | 4 步 / 2 次 | 10.86s | **$0.000333** |
+| 自然提问（无工具指令） | 11 步 / 12 次 | 未单独计时 | **$0.004572** |
+| **合计** | 15 步 / 14 次 | — | **$0.004905** |
+
+- 闭环：Session A `memory_observe` 写入「用户喜欢听夜航星」；**新 Session B** 调 `memory_context` 召回 `episodic` + `working`，作答「夜航星」。
+- 自然提问：prompt 只有「用户喜欢什么歌？」，模型**自主**调用 `memory_search` + `memory_context`，并额外探索本地音乐库（所以步数/金额偏高）。
+- 计费：`deepseek-flash` off-peak（$0.15/M cache miss、$0.003/M cache hit、$0.6/M output）；peak 翻倍。
+- 真实模型闭环**不在 CI 里**（会产生 token 费用），由手动脚本/会话执行。
+
 ## 许可
 
 AGPL-3.0-or-later

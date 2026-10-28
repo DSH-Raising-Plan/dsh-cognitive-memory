@@ -5,9 +5,16 @@ DeepSeek Harness **cognitive memory** plugin: starts an external **cognitive-mem
 **Replaces** in-process A-MEM (Chroma). Aimed at DeepSeek Harness / **DSH desk-pet (丛雨)**.
 
 > Community plugin. Not affiliated with DeepSeek.  
-> Full Chinese docs (vision + install): [README.md](./README.md)
+> Full Chinese docs: [README.md](./README.md) · Algorithm roadmap: [ROADMAP.md](./ROADMAP.md)
 
 This repo is the **Host Adapter** (process lifecycle + DSH tools). The Python `MemoryService` usually lives in a monorepo at `services/cognitive-memory`.
+
+**Core chain:** `event → buffer → link → episode → pattern → filter → long-term → user model`  
+**Video:** `runStoryboard → segments → topics → temp memory → cross-source interest → long-term`  
+
+Optimize six questions (not more memory layers): what to keep; how to form episodes; what evidence promotes interest; how to update conflicts; how memory improves behavior; how to prove it works.
+
+**P0–P3:** data model + evidence rules → Graphiti/SQLite reliability → video interest state machine (`UNKNOWN→…→CONFIRMED`) → idle consolidate + experiments. Evidence tiers: passive / attention / engage / explicit.
 
 ## What it is for
 

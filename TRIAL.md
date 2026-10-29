@@ -14,7 +14,7 @@
 ```bash
 # 在仓库或已安装的 service/ 下
 pip install -e ./service   # 首次
-python -m cognitive_memory.cli backup --data-dir "%LOCALAPPDATA%/DSH/cognitive-memory"
+python -m mnemosyne.cli backup --data-dir "%LOCALAPPDATA%/DSH/mnemosyne"
 # 或使用脚本（Windows）：
 # scripts/backup-daily.ps1
 ```
@@ -22,13 +22,13 @@ python -m cognitive_memory.cli backup --data-dir "%LOCALAPPDATA%/DSH/cognitive-m
 恢复：
 
 ```bash
-python -m cognitive_memory.cli restore <backup.db> --data-dir "..." --force
+python -m mnemosyne.cli restore <backup.db> --data-dir "..." --force
 ```
 
 从旧 A-MEM 导入（候选，不直接当 ACTIVE）：
 
 ```bash
-python -m cognitive_memory.cli migrate-amem --jsonl path/to/export.jsonl
+python -m mnemosyne.cli migrate-amem --jsonl path/to/export.jsonl
 ```
 
 ## 什么时候可以当主记忆

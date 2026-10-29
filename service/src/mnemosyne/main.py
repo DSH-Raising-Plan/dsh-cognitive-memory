@@ -12,7 +12,7 @@ import uvicorn
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="DSH Cognitive Memory Service")
+    parser = argparse.ArgumentParser(description="Mnemosyne Service")
     parser.add_argument("--host", default=os.environ.get("DSH_MEMORY_HOST", "127.0.0.1"))
     parser.add_argument("--port", type=int, default=int(os.environ.get("DSH_MEMORY_PORT", "0")))
     parser.add_argument("--data-dir", default=os.environ.get("DSH_MEMORY_DATA_DIR", ""))
@@ -27,7 +27,7 @@ def main(argv: list[str] | None = None) -> int:
     if src_root not in sys.path:
         sys.path.insert(0, src_root)
 
-    from cognitive_memory.bootstrap import build_context, write_service_json
+    from mnemosyne.bootstrap import build_context, write_service_json
 
     ctx = build_context(
         data_dir=args.data_dir or None,
@@ -103,7 +103,7 @@ def main(argv: list[str] | None = None) -> int:
     started.wait(timeout=15)
 
     if args.mcp:
-        from cognitive_memory.mcp.server import run_mcp_stdio
+        from mnemosyne.mcp.server import run_mcp_stdio
 
         try:
             run_mcp_stdio(ctx.service)

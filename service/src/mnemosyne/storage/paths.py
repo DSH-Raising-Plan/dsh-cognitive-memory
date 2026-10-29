@@ -8,13 +8,21 @@ from pathlib import Path
 
 
 def default_data_root() -> Path:
-    override = os.environ.get("DSH_MEMORY_DATA_DIR", "").strip()
+    override = (
+        os.environ.get("DSH_MNEMOSYNE_DATA_DIR", "").strip()
+        or os.environ.get("DSH_MEMORY_DATA_DIR", "").strip()
+    )
     if override:
         return Path(override).expanduser().resolve()
     local = os.environ.get("LOCALAPPDATA") or os.environ.get("XDG_DATA_HOME")
     if local:
-        return Path(local) / "DSH" / "cognitive-memory"
-    return Path.home() / ".local" / "share" / "DSH" / "cognitive-memory"
+        root = Path(local) / "DSH"
+        next_dir = root / "mnemosyne"
+        legacy = root / "cognitive-memory"
+        if not next_dir.exists() and (legacy / "data" / "memory.db").exists():
+            return legacy
+        return next_dir
+    return Path.home() / ".local" / "share" / "DSH" / "mnemosyne"
 
 
 def ensure_layout(root: Path | None = None) -> dict[str, Path]:

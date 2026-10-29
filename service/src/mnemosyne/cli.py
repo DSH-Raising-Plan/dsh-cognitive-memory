@@ -16,7 +16,7 @@ def _now_stamp() -> str:
 
 
 def cmd_backup(args: argparse.Namespace) -> int:
-    from cognitive_memory.storage.paths import ensure_layout
+    from mnemosyne.storage.paths import ensure_layout
 
     paths = ensure_layout(Path(args.data_dir).resolve() if args.data_dir else None)
     db = paths["db"]
@@ -51,7 +51,7 @@ def cmd_backup(args: argparse.Namespace) -> int:
 
 
 def cmd_restore(args: argparse.Namespace) -> int:
-    from cognitive_memory.storage.paths import ensure_layout
+    from mnemosyne.storage.paths import ensure_layout
 
     src = Path(args.backup).resolve()
     if not src.is_file():
@@ -70,7 +70,7 @@ def cmd_restore(args: argparse.Namespace) -> int:
 
 
 def cmd_health(args: argparse.Namespace) -> int:
-    from cognitive_memory.bootstrap import build_context
+    from mnemosyne.bootstrap import build_context
 
     ctx = build_context(data_dir=args.data_dir or None, token=args.token or "cli-health")
     print(json.dumps(ctx.service.health(), ensure_ascii=False, indent=2))
@@ -80,8 +80,8 @@ def cmd_health(args: argparse.Namespace) -> int:
 
 def cmd_migrate_amem(args: argparse.Namespace) -> int:
     """从 A-MEM / JSONL 导入为 observations + candidate memories。"""
-    from cognitive_memory.bootstrap import build_context
-    from cognitive_memory.domain.models import (
+    from mnemosyne.bootstrap import build_context
+    from mnemosyne.domain.models import (
         MemoryProposeIn,
         MemoryStatus,
         MemoryType,
@@ -154,7 +154,7 @@ def cmd_migrate_amem(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="cognitive-memory")
+    parser = argparse.ArgumentParser(prog="mnemosyne")
     parser.add_argument("--data-dir", default="")
     parser.add_argument("--token", default="")
     sub = parser.add_subparsers(dest="cmd", required=True)

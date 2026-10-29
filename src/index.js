@@ -1,5 +1,5 @@
 /**
- * dsh-cognitive-memory — DSH Host Adapter for external Memory Service.
+ * dsh-mnemosyne — DSH Host Adapter for external Memory Service.
  * Replaces in-process A-MEM with subprocess + REST/MCP tools.
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
@@ -20,7 +20,7 @@ import {
   updateToolSpec,
 } from './tool-spec.js';
 
-export const name = 'dsh-cognitive-memory';
+export const name = 'dsh-mnemosyne';
 export const inject = ['tools'];
 
 export { MemoryClient } from './memory-client.js';
@@ -70,7 +70,9 @@ export async function apply(ctx) {
   try {
     rootConfig = (typeof ctx.get === 'function' ? ctx.get('config') : null) || {};
   } catch { rootConfig = {}; }
-  const cfg = rootConfig['dsh-cognitive-memory'] || {};
+  const cfg = rootConfig['dsh-mnemosyne']
+    || rootConfig['dsh-cognitive-memory']
+    || {};
   const autoStart = cfg.auto_start !== false;
 
   const host = new MemoryProcessHost({
@@ -233,7 +235,7 @@ export async function apply(ctx) {
             });
           })().catch((err) => {
             if (process.env.DSH_MEMORY_DEBUG) {
-              process.stderr.write(`[cognitive-memory] auto-capture skipped: ${err}\n`);
+              process.stderr.write(`[mnemosyne] auto-capture skipped: ${err}\n`);
             }
           });
           pendingCaptures.add(task);
@@ -266,7 +268,7 @@ export async function apply(ctx) {
         }
       } catch (err) {
         if (process.env.DSH_MEMORY_DEBUG) {
-          process.stderr.write(`[cognitive-memory] auto-capture ignored: ${err}\n`);
+          process.stderr.write(`[mnemosyne] auto-capture ignored: ${err}\n`);
         }
       }
     });

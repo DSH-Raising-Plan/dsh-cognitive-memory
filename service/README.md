@@ -1,11 +1,11 @@
-# cognitive-memory · DSH 外置认知记忆服务
+# mnemosyne · DSH 外置演化记忆服务
 
-面向 DeepSeek Harness / **丛雨桌宠（DSH）** 的独立认知记忆子进程。完全替代进程内 A-MEM：观察可追溯、推断与事实分离、长期记忆有证据、异步任务可恢复。
+面向 DeepSeek Harness / **丛雨桌宠（DSH）** 的独立演化记忆子进程。完全替代进程内 A-MEM：观察可追溯、推断与事实分离、长期记忆有证据、异步任务可恢复。
 
-落地索引：[`docs/COGNITIVE_MEMORY_SPEC.md`](../docs/COGNITIVE_MEMORY_SPEC.md)  
-优化清单与排期：[`docs/COGNITIVE_MEMORY_ROADMAP.md`](../docs/COGNITIVE_MEMORY_ROADMAP.md)  
-状态机与证据规范：[`docs/COGNITIVE_MEMORY_STATE_MACHINE.md`](../docs/COGNITIVE_MEMORY_STATE_MACHINE.md)  
-DSH 插件：[`dsh-cognitive-memory`](../../_dsh_plugins/dsh-cognitive-memory)
+落地索引：[`docs/MNEMOSYNE_SPEC.md`](../docs/MNEMOSYNE_SPEC.md)  
+优化清单与排期：[`docs/MNEMOSYNE_ROADMAP.md`](../docs/MNEMOSYNE_ROADMAP.md)  
+状态机与证据规范：[`docs/MNEMOSYNE_STATE_MACHINE.md`](../docs/MNEMOSYNE_STATE_MACHINE.md)  
+DSH 插件：[`dsh-mnemosyne`](../../_dsh_plugins/dsh-mnemosyne)
 
 ### 核心链路
 
@@ -141,8 +141,8 @@ DSH 插件：[`dsh-cognitive-memory`](../../_dsh_plugins/dsh-cognitive-memory)
 
 | 阶段 | 内容 | 文档 |
 | --- | --- | --- |
-| **P0** | Observation / Episode / Candidate / Memory / Evidence 统一；晋升·失效·纠正规则；决策日志与算法版本 | [STATE_MACHINE](../docs/COGNITIVE_MEMORY_STATE_MACHINE.md) |
-| **P1** | Graphiti 时间图谱 + 混合检索；SQLite 作证据与任务底座；REST/MCP 与失败恢复加固 | [ROADMAP](../docs/COGNITIVE_MEMORY_ROADMAP.md) |
+| **P0** | Observation / Episode / Candidate / Memory / Evidence 统一；晋升·失效·纠正规则；决策日志与算法版本 | [STATE_MACHINE](../docs/MNEMOSYNE_STATE_MACHINE.md) |
+| **P1** | Graphiti 时间图谱 + 混合检索；SQLite 作证据与任务底座；REST/MCP 与失败恢复加固 | [ROADMAP](../docs/MNEMOSYNE_ROADMAP.md) |
 | **P2** | `runStoryboard`；观看行为与内容分模；临时记忆；跨来源兴趣；`UNKNOWN→…→CONFIRMED`；反向证据 | 同上 §C |
 | **P3** | 空闲巩固；策略 A/B；固定测试集验证准确性 / 纠错 / 主动收益 | 同上 §F |
 
@@ -163,8 +163,8 @@ DSH 插件：[`dsh-cognitive-memory`](../../_dsh_plugins/dsh-cognitive-memory)
 ## 仓库结构（以及为什么这样拆）
 
 ```
-services/cognitive-memory/
-├── src/cognitive_memory/
+services/mnemosyne/
+├── src/mnemosyne/
 │   ├── main.py / bootstrap.py / cli.py   # 进程入口 · 组装 · 备份/恢复/迁移
 │   ├── domain/                           # 观察 / 记忆 / 上下文等契约模型
 │   ├── core/service.py                   # 唯一业务核心 MemoryService
@@ -181,8 +181,8 @@ services/cognitive-memory/
 宿主侧：
 
 ```
-_dsh_plugins/dsh-cognitive-memory/   # Node：拉起子进程 + 注册 DSH tools
-Murasame/cognitive_memory_bridge.py  # 桌宠 HTTP 客户端 / auto_start
+_dsh_plugins/dsh-mnemosyne/   # Node：拉起子进程 + 注册 DSH tools
+Murasame/mnemosyne_bridge.py  # 桌宠 HTTP 客户端 / auto_start
 ```
 
 | 选择 | 理由 |
@@ -220,20 +220,20 @@ Murasame/cognitive_memory_bridge.py  # 桌宠 HTTP 客户端 / auto_start
 ## 快速启动
 
 ```bash
-cd services/cognitive-memory
+cd services/mnemosyne
 pip install -e ".[dev]"
 set DSH_MEMORY_TOKEN=dev-token
 set DSH_MEMORY_DATA_DIR=%TEMP%\dsh-cm-dev
-python -m cognitive_memory.main --host 127.0.0.1 --port 8765 --token dev-token --data-dir %TEMP%\dsh-cm-dev
+python -m mnemosyne.main --host 127.0.0.1 --port 8765 --token dev-token --data-dir %TEMP%\dsh-cm-dev
 ```
 
 ```bash
 curl -H "Authorization: Bearer dev-token" http://127.0.0.1:8765/api/v1/health
 ```
 
-运维：`python -m cognitive_memory.cli backup|restore|migrate-amem|health`
+运维：`python -m mnemosyne.cli backup|restore|migrate-amem|health`
 
-数据目录（Windows）：`%LOCALAPPDATA%/DSH/cognitive-memory/` → `runtime/` · `data/memory.db` · `logs/` · `cache/`
+数据目录（Windows）：`%LOCALAPPDATA%/DSH/mnemosyne/` → `runtime/` · `data/memory.db` · `logs/` · `cache/`
 
 ```bash
 pytest -q

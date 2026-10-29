@@ -1,9 +1,9 @@
-# Cognitive Memory Service — default config (override via env / CLI)
+# Mnemosyne Service — default config (override via env / CLI)
 host: "127.0.0.1"
 port: 0  # 0 = OS 分配随机端口
 api_prefix: "/api/v1"
 access_token_env: "DSH_MEMORY_TOKEN"
-data_dir: ""  # 空则用 %LOCALAPPDATA%/DSH/cognitive-memory
+data_dir: ""  # 空则用 %LOCALAPPDATA%/DSH/mnemosyne
 log_level: "INFO"
 vector_index:
   enable: false

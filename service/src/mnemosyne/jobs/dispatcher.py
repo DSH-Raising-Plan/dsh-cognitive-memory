@@ -9,9 +9,9 @@ import time
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 
-from cognitive_memory.core.service import MemoryService
-from cognitive_memory.events.bus import EventBus
-from cognitive_memory.storage.db import Database
+from mnemosyne.core.service import MemoryService
+from mnemosyne.events.bus import EventBus
+from mnemosyne.storage.db import Database
 
 
 def _now() -> str:
@@ -202,12 +202,12 @@ class BackgroundRuntime:
 
     def _handle_consolidation(self, payload: dict[str, Any]) -> None:
         """慢速通道 V1：把观察整理为 episodic 候选（规则式，可后续换 LLM）。"""
-        from cognitive_memory.cognition.consolidate import consolidate_observation
+        from mnemosyne.cognition.consolidate import consolidate_observation
 
         consolidate_observation(self.service, payload.get("observation_id") or "")
 
     def _handle_promote(self, payload: dict[str, Any]) -> None:
-        from cognitive_memory.cognition.promote import maybe_promote
+        from mnemosyne.cognition.promote import maybe_promote
 
         maybe_promote(self.service, payload.get("memory_id") or "")
 
@@ -216,6 +216,6 @@ class BackgroundRuntime:
         if not mid:
             return
         # 标记不正确 → 失效
-        from cognitive_memory.domain.models import MemoryStatus, MemoryUpdateIn
+        from mnemosyne.domain.models import MemoryStatus, MemoryUpdateIn
 
         self.service.update_memory(mid, MemoryUpdateIn(status=MemoryStatus.INVALIDATED))

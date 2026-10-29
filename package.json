@@ -1,21 +1,21 @@
 {
-  "name": "dsh-cognitive-memory",
-  "version": "0.1.0",
-  "description": "DeepSeek Harness 认知记忆插件：拉起外置 Memory Service 子进程，暴露检索/上下文/反馈工具",
+  "name": "dsh-mnemosyne",
+  "version": "0.2.0",
+  "description": "DeepSeek Harness 演化记忆系统：证据、时间、情境、状态演化、情绪与纠错",
   "keywords": [
     "dsh",
     "dsh-plugin",
     "deepseek-harness",
     "memory",
-    "cognitive-memory"
+    "mnemosyne"
   ],
-  "homepage": "https://github.com/DSH-Raising-Plan/dsh-cognitive-memory#readme",
+  "homepage": "https://github.com/DSH-Raising-Plan/dsh-mnemosyne#readme",
   "bugs": {
-    "url": "https://github.com/DSH-Raising-Plan/dsh-cognitive-memory/issues"
+    "url": "https://github.com/DSH-Raising-Plan/dsh-mnemosyne/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/DSH-Raising-Plan/dsh-cognitive-memory.git"
+    "url": "git+https://github.com/DSH-Raising-Plan/dsh-mnemosyne.git"
   },
   "author": "canyueY",
   "license": "AGPL-3.0-or-later",

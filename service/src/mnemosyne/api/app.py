@@ -10,8 +10,8 @@ from typing import Any, Callable
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 
-from cognitive_memory.core.service import ConflictError, MemoryService, NotFoundError
-from cognitive_memory.domain.models import (
+from mnemosyne.core.service import ConflictError, MemoryService, NotFoundError
+from mnemosyne.domain.models import (
     ContextBuildIn,
     FeedbackIn,
     MemoryProposeIn,
@@ -28,7 +28,7 @@ def create_app(
     access_token: str,
     api_prefix: str = "/api/v1",
 ) -> FastAPI:
-    app = FastAPI(title="DSH Cognitive Memory", version="0.1.0")
+    app = FastAPI(title="Mnemosyne", version="0.1.0")
     app.state.service = service
     app.state.access_token = access_token
 

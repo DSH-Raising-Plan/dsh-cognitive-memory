@@ -15,9 +15,9 @@ test('start() drops stale service.json before spawning', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'mem-proc-'));
   try {
     const root = join(dir, 'service');
-    await mkdir(join(root, 'src', 'cognitive_memory'), { recursive: true });
+    await mkdir(join(root, 'src', 'mnemosyne'), { recursive: true });
     // Fail fast; we only care that the stale file was removed before spawn.
-    await writeFile(join(root, 'src', 'cognitive_memory', 'main.py'), 'raise SystemExit(1)\n');
+    await writeFile(join(root, 'src', 'mnemosyne', 'main.py'), 'raise SystemExit(1)\n');
 
     const data = join(dir, 'data');
     await mkdir(join(data, 'runtime'), { recursive: true });

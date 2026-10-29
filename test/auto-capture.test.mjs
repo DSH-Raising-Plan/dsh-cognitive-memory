@@ -36,7 +36,7 @@ test('auto-capture writes user + final assistant, not reasoning', async () => {
     get(name) {
       if (name !== 'config') return null;
       return {
-        'dsh-cognitive-memory': {
+        'dsh-mnemosyne': {
           base_url: `http://127.0.0.1:${port}`,
           token: 'test-token',
           auto_capture: true,

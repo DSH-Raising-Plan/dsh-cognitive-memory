@@ -11,13 +11,17 @@ const here = dirname(fileURLToPath(import.meta.url));
 const bundled = resolve(here, '..', 'service');
 
 test('resolveServiceRoot finds bundled service/ without env', () => {
-  const prev = process.env.DSH_COGNITIVE_MEMORY_ROOT;
+  const prevNew = process.env.DSH_MNEMOSYNE_ROOT;
+  const prevOld = process.env.DSH_COGNITIVE_MEMORY_ROOT;
+  delete process.env.DSH_MNEMOSYNE_ROOT;
   delete process.env.DSH_COGNITIVE_MEMORY_ROOT;
   try {
     const root = resolveServiceRoot();
     assert.equal(resolve(root), bundled);
   } finally {
-    if (prev === undefined) delete process.env.DSH_COGNITIVE_MEMORY_ROOT;
-    else process.env.DSH_COGNITIVE_MEMORY_ROOT = prev;
+    if (prevNew === undefined) delete process.env.DSH_MNEMOSYNE_ROOT;
+    else process.env.DSH_MNEMOSYNE_ROOT = prevNew;
+    if (prevOld === undefined) delete process.env.DSH_COGNITIVE_MEMORY_ROOT;
+    else process.env.DSH_COGNITIVE_MEMORY_ROOT = prevOld;
   }
 });

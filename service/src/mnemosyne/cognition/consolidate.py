@@ -6,8 +6,8 @@ from __future__ import annotations
 import json
 import sqlite3
 
-from cognitive_memory.core.service import MemoryService
-from cognitive_memory.domain.models import MemoryProposeIn, MemoryStatus, MemoryType, SourceKind
+from mnemosyne.core.service import MemoryService
+from mnemosyne.domain.models import MemoryProposeIn, MemoryStatus, MemoryType, SourceKind
 
 
 def consolidate_observation(service: MemoryService, observation_id: str) -> str | None:

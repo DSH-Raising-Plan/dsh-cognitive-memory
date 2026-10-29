@@ -633,6 +633,32 @@ Only capabilities verified by tests should be marked as implemented in release n
 
 ---
 
+## Cost Estimate (Reference)
+
+> Order-of-magnitude API cost estimate, not a bill. Based on `deepseek-flash` off-peak pricing; peak hours are roughly 2×.
+
+### What costs money
+
+- **Auto-capture**: `session/event` writes to local SQLite, with **no model API cost**.
+- **Local memory service**: FTS and rule-based processing, with **no external embedding / LLM calls**.
+- **Incremental cost** comes from extra input/output when the model calls `memory_search` / `memory_context`, plus the plugin schema (~773 tokens per request, usually cache hits).
+
+Typical turn: ~1.5 model calls, ~7,000 cached input + 400 new input + 120 output; recall frequency assumed at 30–50%.
+
+### Monthly Estimate
+
+| Usage | Turns/month | Incremental plugin cost | Total with plugin |
+| --- | ---: | ---: | ---: |
+| Light (20/day) | 600 | $0.03–0.09 (≈¥0.2–0.6) | $0.08–0.15 (≈¥0.6–1.1) |
+| Regular (60/day) | 1,800 | $0.09–0.27 (≈¥0.6–1.9) | $0.25–0.45 (≈¥1.8–3.2) |
+| Heavy (150/day) | 4,500 | $0.23–0.68 (≈¥1.6–4.8) | $0.70–1.10 (≈¥5.0–7.8) |
+
+Peak hours (`deepseek-flash` pricing doubles) are roughly 2× the table.
+
+> This is a magnitude estimate. Actual cost depends on model call count, recall frequency, recall result length, and cache hit rate. The plugin has no separate API subscription fee.
+
+---
+
 ## 13. Boundaries and Privacy
 
 Because Mnemosyne targets long-term companionship, it must take the risks of misunderstanding, over-inference, and privacy seriously.

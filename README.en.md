@@ -135,6 +135,10 @@ flowchart TD
     K --> C
 ```
 
+![Architecture: one memory lifecycle](docs/assets/figures/architecture.png)
+
+*DSH Host, Memory Service, SQLite, Worker, and Agent share one lifecycle.*
+
 ### Three Layers
 
 #### Layer 1: Facts and Evidence
@@ -169,6 +173,11 @@ Ordinary memory often records information and its write time. Mnemosyne aims to 
 
 This lets the system separate historical facts, current states, plans, and expired information.
 
+![Time: four kinds of time in one memory](docs/assets/figures/time.png)
+
+*Event time, record time, valid time, and confirmation time keep "was true" and "is valid now" separate.*
+
+
 Example:
 
 > Someone used to like a certain kind of work, but recently said their interest has changed.
@@ -190,6 +199,11 @@ Suggested categories:
 
 These are logical categories, not a claim about the exact enum values in the repository; the implementation must stay consistent with its own data model.
 
+![Evidence chain](docs/assets/figures/evidence-chain.png)
+
+*From observation, evidence, and candidate to long-term memory and recall; inference never silently becomes fact.*
+
+
 Evidence provenance lets DSH answer not only what it knows, but why the memory exists, how reliable it is, and what new evidence could change it.
 
 ### 4.3 State Evolution and Conflict Handling
@@ -206,6 +220,11 @@ Goals include:
 - Preserve conflict when evidence is insufficient instead of forcing a single answer.
 
 A state change does not invalidate history. A current state changing does not mean the past state never existed.
+
+![Memory change flow](docs/assets/figures/change-flow.png)
+
+*New evidence never overwrites a value directly: conflict check → change plan → write verification → state evolution.*
+
 
 ### 4.4 Context and Relationship Association
 
@@ -235,6 +254,11 @@ Design goals:
 - Re-evaluate past judgments when new evidence appears.
 
 If someone shows strong dissatisfaction during an argument and later explains and repairs the relationship, the system should preserve the event context, what was actually expressed, possible emotional states, and the later outcome — not reduce the event to "this person is quick to anger."
+
+![Emotion: an event with evidence, not a label](docs/assets/figures/emotion.png)
+
+*Compound emotions, intensity, confidence, counter-evidence, and later outcomes live in the same memory.*
+
 
 ### 4.6 Time-Aware Retrieval
 
@@ -295,6 +319,11 @@ Spatial information must respect source constraints:
 
 Spatial context can distinguish experiences across settings, but it should not become unnecessary personal location tracking.
 
+![Space: the context in which an event happened](docs/assets/figures/space.png)
+
+*Place is context, not location tracking; unknown locations stay unknown.*
+
+
 ### 5.3 Emotion
 
 Emotion describes possible compound subjective states and their changes during an event.
@@ -333,6 +362,11 @@ That is the core ambition: let memory express the complexity of an event while p
 Receive information from DSH agents, interaction tools, and permitted data sources. Record the necessary facts, provenance, time, and subject references.
 
 Reliable persistence of raw observations should come before semantic reasoning, so a reasoning failure does not lose the input.
+
+![Ingest flow](docs/assets/figures/write-flow.png)
+
+*Raw observations are persisted first, then processed via Outbox / Worker; writes do not depend on the model calling `memory_observe`.*
+
 
 ### 6.2 Extraction and Association
 
@@ -536,9 +570,19 @@ Record interactions, relationship changes, and supporting evidence so the agent 
 
 Organize action outcomes, failures, corrections, and recurring patterns into retrievable historical grounds for later decisions.
 
+![Memory in a long-running project](docs/assets/figures/long-project.png)
+
+*Decisions, reasons, failures, and corrections stay on the timeline across months.*
+
+
 ### 10.5 Interest Development and Exploration
 
 DSH agents can use memory to identify unresolved questions, interest hypotheses that need testing, or topics worth exploring further.
+
+![Interest change, not overwrite](docs/assets/figures/interest-change.png)
+
+*Old states are preserved and new states take effect; recommend from the current state, review from the historical one.*
+
 
 Mnemosyne provides history and state; the agent decides whether to explore, what to explore, and when to stop.
 
@@ -547,6 +591,11 @@ Mnemosyne provides history and state; the agent decides whether to explore, what
 With appropriate permissions and explicit data boundaries, the memory architecture can also support project collaboration, public knowledge accumulation, and incident review within DSH.
 
 Personal memory, shared knowledge, and public events must have distinct access permissions, ownership, and scope. Private memory must not automatically become community knowledge.
+
+![Memory boundaries in multi-agent collaboration](docs/assets/figures/agent-collaboration.png)
+
+*Private by default; sharing requires authorization; private memory never becomes community knowledge automatically.*
+
 
 ### 10.7 Memory Is Not Consciousness
 

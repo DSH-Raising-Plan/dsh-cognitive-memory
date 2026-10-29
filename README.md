@@ -25,6 +25,14 @@ Mnemosyne 希望进一步回答：
 
 Mnemosyne 的核心目标不是单纯扩大记忆容量，而是让记忆具有**时间性、情境性、可追溯性、可演化性和可纠错性**。
 
+## 一眼看懂：从存储到演化
+
+![传统记忆 vs Mnemosyne 演化记忆](docs/assets/mnemosyne-old-vs-new.png)
+
+*左：传统记忆——记住结论；右：Mnemosyne——记住证据、时间与变化。*
+
+---
+
 ---
 
 ## 目录

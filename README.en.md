@@ -23,6 +23,14 @@ Mnemosyne also asks:
 
 The goal is not merely a larger memory store. It is memory that is **temporal, contextual, traceable, evolving, and correctable**.
 
+## At a Glance: From Storage to Evolution
+
+![Old memory vs Mnemosyne evolving memory](docs/assets/mnemosyne-old-vs-new.png)
+
+*Left: traditional memory stores conclusions. Right: Mnemosyne keeps evidence, time, and change.*
+
+---
+
 ---
 
 ## Contents

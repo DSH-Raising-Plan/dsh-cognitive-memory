@@ -10,6 +10,8 @@
 
 Mnemosyne (`dsh-mnemosyne`) 是面向 DSH（DeepSeek Harness）的统一记忆基础设施，旨在为长期陪伴、持续学习、个体化理解和社会关系演化提供可靠、可追溯、可纠正的记忆能力。
 
+> **更名说明**：本项目由 `dsh-cognitive-memory` 更名而来。旧配置键、旧环境变量与旧数据目录仍保留迁移兼容；安装时请使用新的 `dsh-mnemosyne`。
+
 传统记忆系统往往关注：**存储了什么，以及能否在需要时找回来。**
 
 Mnemosyne 希望进一步回答：

@@ -8,6 +8,8 @@
 
 Mnemosyne (`dsh-mnemosyne`) is the unified memory infrastructure for DSH (DeepSeek Harness), built to support long-term companionship, continuous learning, individualized understanding, and the evolution of social relationships with memory that is reliable, traceable, and correctable.
 
+> **Rename note:** this project was formerly `dsh-cognitive-memory`. Legacy config keys, environment variables, and data directories remain supported for migration; install as `dsh-mnemosyne`.
+
 Traditional memory systems mostly ask: **what was stored, and can it be retrieved when needed?**
 
 Mnemosyne also asks:

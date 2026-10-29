@@ -1,5 +1,5 @@
 /**
- * REST client for cognitive-memory service (127.0.0.1).
+ * REST client for mnemosyne service (127.0.0.1).
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 

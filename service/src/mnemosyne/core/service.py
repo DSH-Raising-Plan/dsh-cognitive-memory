@@ -9,7 +9,7 @@ import sqlite3
 from datetime import datetime, timezone
 from typing import Any
 
-from cognitive_memory.domain.models import (
+from mnemosyne.domain.models import (
     ContextBuildIn,
     ContextBuildOut,
     FeedbackIn,
@@ -24,9 +24,9 @@ from cognitive_memory.domain.models import (
     Task,
     TaskCreateIn,
 )
-from cognitive_memory.events.bus import EventBus
-from cognitive_memory.storage.db import Database
-from cognitive_memory.storage.ids import new_id
+from mnemosyne.events.bus import EventBus
+from mnemosyne.storage.db import Database
+from mnemosyne.storage.ids import new_id
 
 
 def _now() -> str:
@@ -144,7 +144,7 @@ class MemoryService:
         event_type: str,
         payload: dict[str, Any],
         *,
-        producer: str = "cognitive-memory",
+        producer: str = "mnemosyne",
         correlation_id: str | None = None,
         causation_id: str | None = None,
     ) -> str:
@@ -534,7 +534,7 @@ class MemoryService:
         )
         fragments: list[dict[str, Any]] = []
         used = 0
-        lines: list[str] = ["【认知记忆·仅供参考】"]
+        lines: list[str] = ["【演化记忆·仅供参考】"]
         for m in hits:
             est = max(1, len(m.content) // 2)
             if used + est > budget and fragments:
@@ -554,7 +554,7 @@ class MemoryService:
         return ContextBuildOut(
             fragments=fragments,
             token_estimate=used,
-            brief="\n".join(lines) if fragments else "【认知记忆】暂无相关条目",
+            brief="\n".join(lines) if fragments else "【演化记忆】暂无相关条目",
         )
 
     def feedback(self, body: FeedbackIn) -> dict[str, Any]:
@@ -651,7 +651,7 @@ class MemoryService:
         ).fetchone()["n"]
         return {
             "ok": True,
-            "service": "cognitive-memory",
+            "service": "mnemosyne",
             "version": "0.1.0",
             "memories": mem_n,
             "observations": obs_n,

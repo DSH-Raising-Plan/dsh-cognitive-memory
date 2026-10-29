@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: DSH Cognitive Memory API
+  title: Mnemosyne API
   version: "1.0.0"
-  description: 外置认知记忆服务 REST 契约（与 MCP 共用 MemoryService）
+  description: 外置演化记忆服务 REST 契约（与 MCP 共用 MemoryService）
 servers:
   - url: http://127.0.0.1:{port}/api/v1
     variables:

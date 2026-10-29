@@ -10,8 +10,8 @@ import json
 import sys
 from typing import Any
 
-from cognitive_memory.core.service import ConflictError, MemoryService, NotFoundError
-from cognitive_memory.domain.models import (
+from mnemosyne.core.service import ConflictError, MemoryService, NotFoundError
+from mnemosyne.domain.models import (
     ContextBuildIn,
     FeedbackIn,
     MemoryProposeIn,
@@ -197,7 +197,7 @@ def run_mcp_stdio(service: MemoryService) -> None:
             elif method == "initialize":
                 result = {
                     "protocolVersion": "2024-11-05",
-                    "serverInfo": {"name": "cognitive-memory", "version": "0.1.0"},
+                    "serverInfo": {"name": "mnemosyne", "version": "0.1.0"},
                     "capabilities": {"tools": {}},
                 }
             else:

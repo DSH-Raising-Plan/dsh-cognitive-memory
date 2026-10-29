@@ -1,12 +1,14 @@
 # Mnemosyne
 
+[English](README.en.md) | **简体中文**
+
 ### DSH Evolving Memory System
 
 **DSH 演化记忆系统**
 
 > 从记住信息，到理解变化；从检索过去，到延续关系。
 
-Mnemosyne (`dsh-mnemosyne`) 是面向 DSH（Digital Social Habitat）的统一记忆基础设施，旨在为长期陪伴、持续学习、个体化理解和社会关系演化提供可靠、可追溯、可纠正的记忆能力。
+Mnemosyne (`dsh-mnemosyne`) 是面向 DSH（DeepSeek Harness）的统一记忆基础设施，旨在为长期陪伴、持续学习、个体化理解和社会关系演化提供可靠、可追溯、可纠正的记忆能力。
 
 传统记忆系统往往关注：**存储了什么，以及能否在需要时找回来。**
 
@@ -70,7 +72,7 @@ Mnemosyne 因此将记忆视为一个持续演化的过程：
 | 英文定位       | DSH Evolving Memory System  |
 | 中文定位       | DSH 演化记忆系统                  |
 | 仓库 / 插件 ID | `dsh-mnemosyne`             |
-| 所属生态       | DSH（Digital Social Habitat） |
+| 所属生态       | DSH（DeepSeek Harness） |
 | 核心职责       | 统一管理记忆证据、时间状态、情境关联、记忆演化与纠错  |
 | 长期目标       | 为长期陪伴、个体化理解和持续学习提供可靠的记忆基础   |
 
@@ -677,7 +679,7 @@ Mnemosyne 提供记忆与证据，不应以记忆推断为依据绕过权限或�
 
 仓库 / 插件 ID：`dsh-mnemosyne`
 
-所属项目：DSH（Digital Social Habitat）
+所属项目：DSH（DeepSeek Harness）
 
 核心方向：
 

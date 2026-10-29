@@ -1,8 +1,8 @@
-# MurasamePet 认知记忆状态机与证据更新规范（草案 V0.1）
+# MurasamePet 演化记忆状态机与证据更新规范（草案 V0.1）
 
 > 目标：把心理学启发变成开发 Agent 可实现的算法规格。  
-> 总路线图：[`COGNITIVE_MEMORY_ROADMAP.md`](./COGNITIVE_MEMORY_ROADMAP.md)。  
-> 实现落点：`services/cognitive-memory`（规则可换 LLM，协议先稳定）。
+> 总路线图：[`MNEMOSYNE_ROADMAP.md`](./MNEMOSYNE_ROADMAP.md)。  
+> 实现落点：`services/mnemosyne`（规则可换 LLM，协议先稳定）。
 
 本文定义：**对象模型、状态、转移条件、证据类型、冲突与衰减、决策日志、验收测试**。阈值与权重字段均为**可配置默认值**，须用实验校准，不得当作心理学常数。
 

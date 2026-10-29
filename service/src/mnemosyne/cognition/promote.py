@@ -3,8 +3,8 @@
 
 from __future__ import annotations
 
-from cognitive_memory.core.service import MemoryService
-from cognitive_memory.domain.models import MemoryStatus, MemoryType, MemoryUpdateIn
+from mnemosyne.core.service import MemoryService
+from mnemosyne.domain.models import MemoryStatus, MemoryType, MemoryUpdateIn
 
 
 def maybe_promote(service: MemoryService, memory_id: str) -> bool:

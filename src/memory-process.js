@@ -1,5 +1,5 @@
 /**
- * Spawn / supervise the Python cognitive-memory subprocess.
+ * Spawn / supervise the Python mnemosyne subprocess.
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
@@ -13,7 +13,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 function isServiceRoot(root) {
   return Boolean(root)
-    && fs.existsSync(path.join(root, 'src', 'cognitive_memory', 'main.py'));
+    && (fs.existsSync(path.join(root, 'src', 'mnemosyne', 'main.py'))
+      || fs.existsSync(path.join(root, 'src', 'cognitive_memory', 'main.py')));
 }
 
 /** Walk candidates so DSH profile installs work without env/config. */
@@ -26,11 +27,15 @@ function resolveServiceRoot(explicit) {
   };
 
   if (explicit) push(explicit);
-  if (process.env.DSH_COGNITIVE_MEMORY_ROOT) {
-    push(process.env.DSH_COGNITIVE_MEMORY_ROOT);
+  if (process.env.DSH_MNEMOSYNE_ROOT) {
+    push(process.env.DSH_MNEMOSYNE_ROOT);
+  }
+  if (process.env.DSH_MNEMOSYNE_ROOT) {
+    // Legacy env var from dsh-cognitive-memory; kept for one migration cycle.
+    push(process.env.DSH_MNEMOSYNE_ROOT);
   }
 
-  // package root = …/dsh-cognitive-memory (Host Adapter next to service/)
+  // package root = …/dsh-mnemosyne (Host Adapter next to service/)
   push(path.join(__dirname, '..', 'service'));
   push(path.join(__dirname, '..', '..', 'service'));
 
@@ -38,25 +43,25 @@ function resolveServiceRoot(explicit) {
   let cur = path.resolve(__dirname);
   for (let i = 0; i < 8; i += 1) {
     push(path.join(cur, 'service'));
-    push(path.join(cur, 'services', 'cognitive-memory'));
+    push(path.join(cur, 'services', 'mnemosyne'));
     const parent = path.dirname(cur);
     if (parent === cur) break;
     cur = parent;
   }
 
   // monorepo fallback (desktop pet checkout)
-  push(path.join(__dirname, '..', '..', '..', 'services', 'cognitive-memory'));
+  push(path.join(__dirname, '..', '..', '..', 'services', 'mnemosyne'));
 
   for (const root of tried) {
     if (isServiceRoot(root)) return root;
   }
 
   const hint = [
-    'cognitive-memory Python service not found.',
+    'mnemosyne Python service not found.',
     'Tried:',
     ...tried.map((p) => `  - ${p}`),
     'Fix: keep repo `service/` next to the plugin, or set',
-    '  DSH_COGNITIVE_MEMORY_ROOT / config.service_root',
+    '  DSH_MNEMOSYNE_ROOT / config.service_root',
     'then: pip install -e "<that-path>" (optional; PYTHONPATH also works).',
   ].join('\n');
   throw new Error(hint);
@@ -69,9 +74,15 @@ function defaultServiceRoot() {
 export { resolveServiceRoot, isServiceRoot };
 
 function defaultDataDir() {
-  if (process.env.DSH_MEMORY_DATA_DIR) return process.env.DSH_MEMORY_DATA_DIR;
+  const envDir = process.env.DSH_MNEMOSYNE_DATA_DIR
+    || process.env.DSH_MEMORY_DATA_DIR;
+  if (envDir) return envDir;
   const local = process.env.LOCALAPPDATA || path.join(os.homedir(), '.local', 'share');
-  return path.join(local, 'DSH', 'cognitive-memory');
+  const next = path.join(local, 'DSH', 'mnemosyne');
+  const legacy = path.join(local, 'DSH', 'cognitive-memory');
+  // Keep existing memories addressable after the rename.
+  if (!fs.existsSync(next) && fs.existsSync(legacy)) return legacy;
+  return next;
 }
 
 function pythonBin() {
@@ -130,7 +141,11 @@ export class MemoryProcessHost {
       ].filter(Boolean).join(path.delimiter),
     };
 
-    const mainPy = path.join(this.serviceRoot, 'src', 'cognitive_memory', 'main.py');
+    const mainPy = [
+      path.join(this.serviceRoot, 'src', 'mnemosyne', 'main.py'),
+      path.join(this.serviceRoot, 'src', 'cognitive_memory', 'main.py'),
+    ].find((p) => fs.existsSync(p));
+    if (!mainPy) throw new Error('mnemosyne Python entrypoint not found');
     this.child = spawn(this.python, [mainPy, '--host', '127.0.0.1', '--port', '0', '--data-dir', this.dataDir, '--token', this.token], {
       env,
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -139,7 +154,7 @@ export class MemoryProcessHost {
 
     this.child.stderr.on('data', (buf) => {
       const line = String(buf);
-      if (process.env.DSH_MEMORY_DEBUG) process.stderr.write(`[cognitive-memory] ${line}`);
+      if (process.env.DSH_MEMORY_DEBUG) process.stderr.write(`[mnemosyne] ${line}`);
     });
     this.child.stdout.on('data', (buf) => {
       const text = String(buf);
@@ -173,7 +188,7 @@ export class MemoryProcessHost {
     }
     if (!this.ready) {
       this.stop();
-      throw new Error('cognitive-memory subprocess failed to become ready');
+      throw new Error('mnemosyne subprocess failed to become ready');
     }
     // health check (the port may be bound before the app is ready)
     const { MemoryClient } = await import('./memory-client.js');
@@ -192,7 +207,7 @@ export class MemoryProcessHost {
     }
     if (!healthy) {
       this.stop();
-      throw new Error(`cognitive-memory health check failed: ${lastErr?.message || 'unknown'}`);
+      throw new Error(`mnemosyne health check failed: ${lastErr?.message || 'unknown'}`);
     }
     return this.info();
   }

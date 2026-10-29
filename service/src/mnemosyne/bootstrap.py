@@ -10,12 +10,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from cognitive_memory.api.app import create_app
-from cognitive_memory.core.service import MemoryService
-from cognitive_memory.events.bus import EventBus
-from cognitive_memory.jobs.dispatcher import BackgroundRuntime
-from cognitive_memory.storage.db import Database
-from cognitive_memory.storage.paths import ensure_layout
+from mnemosyne.api.app import create_app
+from mnemosyne.core.service import MemoryService
+from mnemosyne.events.bus import EventBus
+from mnemosyne.jobs.dispatcher import BackgroundRuntime
+from mnemosyne.storage.db import Database
+from mnemosyne.storage.paths import ensure_layout
 
 
 @dataclass

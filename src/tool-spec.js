@@ -21,7 +21,7 @@ function jsonOut() {
 export function searchToolSpec() {
   return {
     name: SEARCH_TOOL,
-    description: '搜索认知记忆（工作/情节/语义/程序性）。替代旧 A-MEM 检索。',
+    description: '搜索演化记忆（工作/情节/语义/程序性）。替代旧 A-MEM 检索。',
     parameters: {
       query: { type: 'string', required: true, description: '检索关键字' },
       limit: { type: 'integer', description: '条数，默认 10' },
@@ -141,7 +141,7 @@ export function observeToolSpec() {
 export function healthToolSpec() {
   return {
     name: HEALTH_TOOL,
-    description: '检查外置认知记忆服务是否健康。',
+    description: '检查外置演化记忆服务是否健康。',
     parameters: {},
     output: jsonOut(),
   };

@@ -29,6 +29,8 @@ class AppContext:
     access_token: str
     host: str
     port: int
+    instance_id: str
+    process_lock: Any = None
 
 
 def _resolve_token() -> str:
@@ -46,10 +48,19 @@ def build_context(
     host: str = "127.0.0.1",
     port: int = 0,
     token: str | None = None,
+    acquire_lock: bool = False,
+    auto_backup_on_migrate: bool = True,
 ) -> AppContext:
     root = Path(data_dir).resolve() if data_dir else None
     paths = ensure_layout(root)
-    db = Database(paths["db"])
+    instance_id = secrets.token_hex(8)
+    process_lock = None
+    if acquire_lock:
+        from mnemosyne.storage.process_lock import ProcessLock
+
+        process_lock = ProcessLock.for_data_dir(paths["root"], instance_id=instance_id)
+        process_lock.acquire()
+    db = Database(paths["db"], auto_backup_on_migrate=auto_backup_on_migrate)
     db.ensure_schema()
     bus = EventBus()
     service = MemoryService(db, bus)
@@ -69,18 +80,21 @@ def build_context(
         access_token=access_token,
         host=host,
         port=port,
+        instance_id=instance_id,
+        process_lock=process_lock,
     )
 
 
 def write_service_json(ctx: AppContext, bound_port: int) -> Path:
     payload = {
-        "instance_id": secrets.token_hex(8),
+        "instance_id": ctx.instance_id,
         "host": ctx.host,
         "port": bound_port,
         "api_prefix": "/api/v1",
         "api_version": "v1",
         "pid": os.getpid(),
         "token_env": "DSH_MEMORY_TOKEN",
+        "data_dir": str(ctx.paths["root"]),
     }
     path = ctx.paths["service_json"]
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.1 — P0 Safety Hardening
+
+- 进程锁：`storage/process_lock.py`（同 `data_dir` 独占；OS 文件锁）
+- 备份 bundle：`manifest.json` + SHA-256；SQLite Backup API 恢复
+- 迁移：preflight / 升级前自动备份 / integrity + schema 校验
+- 删除：Observation DELETE、Hard Forget 清 versions/relations/schema refs、取消相关 tasks
+- REST：`/privacy/deletion-plan|execute`、`POST /memories/{id}/forget`
+- CLI：`mnemosyne doctor`；文档 Implemented/Partial/Planned + `MNEMOSYNE_2.0_FINAL_PLAN.md`
+
 ## 0.3.0 — Mnemosyne 2.0 P0–P1 回灌
 
 - **MNE-P0-01** `POST /api/v1/retrieve`：RetrievalPlanner + FOUND/PARTIAL/NO_MATCH/FAILED/NOT_NEEDED；工具 `memory_retrieve`

@@ -134,6 +134,15 @@ flowchart TB
 
 里程碑：已有不依赖 Mnemosyne 内部实现的外部组件，真实走通注册 → 发现 → 授权 → 交换 → 安全拒绝。
 
+### P3.1 Foundation Stabilization
+
+独立小阶段：冻结验收范围、可重复验证、发布基线。  
+计划：[`P3.1_FOUNDATION_STABILIZATION.md`](./P3.1_FOUNDATION_STABILIZATION.md)  
+基线 ID：`foundation-0.1.0`（`schemas/VERSIONS.json`）  
+**不新增生态能力**；Partial/Planned 生产安全决策放在稳定基线发布之后。
+
+**发布：** `P3 Foundation 1.0 — Stabilized`（#18）。 路线：`#17 Accepted → #18 Stabilization → Foundation 1.0 → Production Security Assessment`。 不自动进入 P3.2。
+
 ## 八、版本与执行顺序
 
 | 版本 | 目标 |

@@ -526,17 +526,34 @@ def create_app(
     @app.get(f"{pref}/discovery")
     def discovery(_: None = Depends(require_token)) -> dict[str, Any]:
         from mnemosyne.interop.schemas import schema_root
+        from mnemosyne.interop.versions import discovery_versions_payload
         from mnemosyne.mcp.tools import TOOL_NAMES
 
         root = schema_root()
-        schema_files = sorted(str(p.relative_to(root)).replace("\\", "/") for p in root.rglob("*.json"))
+        schema_files = sorted(
+            str(p.relative_to(root)).replace("\\", "/")
+            for p in root.rglob("*.json")
+            if p.name != "VERSIONS.json"
+        )
+        versions = discovery_versions_payload()
+        pcip_meta = dict(versions.get("pcip") or {})
         return {
             "ok": True,
-            "mnemosyne_api": "v1",
+            "mnemosyne_api": versions.get("mnemosyne_api") or "v1",
+            "baseline": versions.get("baseline"),
+            "versions": versions,
             "protocols": ["rest", "mcp", "cli", "stdio"],
             "mcp_tools": TOOL_NAMES,
             "schemas": schema_files,
-            "pcip": {"status": "proposal", "version": "0.1-proposal", "l3_default": "forbidden"},
+            "pcip": {
+                "status": "proposal",
+                "version": pcip_meta.get("pcip_version", "0.1-proposal"),
+                "l3_default": pcip_meta.get("l3_default", "forbidden"),
+                "inbound_landing": pcip_meta.get("inbound_landing", "observation_only"),
+                "inbound_trust_default": pcip_meta.get(
+                    "inbound_trust_default", "untrusted"
+                ),
+            },
             "federation": {"status": "stub", "transport": "local_api_only"},
         }
 

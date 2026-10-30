@@ -30,8 +30,10 @@ class DiscoveryApiTests(unittest.TestCase):
             self.assertEqual(r.status_code, 200, r.text)
             body = r.json()
             self.assertTrue(body.get("ok"))
+            self.assertEqual(body.get("baseline"), "foundation-0.1.0")
             self.assertIn("pcip", body)
             self.assertEqual(body["pcip"].get("l3_default"), "forbidden")
+            self.assertEqual(body["pcip"].get("inbound_trust_default"), "untrusted")
             self.assertTrue(any("component-contract" in s for s in body.get("schemas") or []))
             ctx.db.close()
 

@@ -1,7 +1,10 @@
 # Universal Interoperability Layer
 
-> 成熟度：**Foundation Verified**（PR [#17](https://github.com/DSH-Raising-Plan/dsh-mnemosyne/pull/17)）；完整生产化与 P2P/Relay 仍为 Partial / Planned。  
-> 验收表：[`P3_FOUNDATION_ACCEPTANCE.md`](./P3_FOUNDATION_ACCEPTANCE.md)
+> **P3 Foundation 1.0 — Stabilized**（基线 `foundation-0.1.0` / release `1.0`）。  
+> 验收冻结：[`P3_FOUNDATION_ACCEPTANCE.md`](./P3_FOUNDATION_ACCEPTANCE.md)  
+> 稳定化：[`P3.1_FOUNDATION_STABILIZATION.md`](./P3.1_FOUNDATION_STABILIZATION.md)  
+> 已知限制：[`FOUNDATION_KNOWN_LIMITS.md`](./FOUNDATION_KNOWN_LIMITS.md)  
+> 下一站：Production Security Assessment（非自动 P3.2）；保持外部 REST 契约向后兼容。
 
 ```
 DSH / Agent / App / Plugin / Service

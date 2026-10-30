@@ -118,6 +118,49 @@ def create_app(
         dump["write_stages"] = ["RECEIVED", "PERSISTED", "INDEXED", "VERIFIED"]
         return dump
 
+    @app.delete(f"{pref}/observations/{{observation_id}}")
+    def delete_observation(
+        observation_id: str,
+        hard: bool = True,
+        cascade_memories: bool = True,
+        _: None = Depends(require_token),
+    ) -> dict[str, Any]:
+        return service.delete_observation(
+            observation_id, hard=hard, cascade_memories=cascade_memories
+        )
+
+    @app.post(f"{pref}/privacy/deletion-plan")
+    def privacy_deletion_plan(body: dict[str, Any], _: None = Depends(require_token)) -> dict[str, Any]:
+        return service.build_deletion_plan(
+            observation_id=body.get("observation_id"),
+            memory_id=body.get("memory_id"),
+            hard=bool(body.get("hard", True)),
+        )
+
+    @app.post(f"{pref}/privacy/deletion-execute")
+    def privacy_deletion_execute(body: dict[str, Any], _: None = Depends(require_token)) -> dict[str, Any]:
+        if body.get("observation_id"):
+            return service.delete_observation(
+                str(body["observation_id"]),
+                hard=bool(body.get("hard", True)),
+                cascade_memories=bool(body.get("cascade_memories", True)),
+            )
+        if body.get("memory_id"):
+            return service.forget_memory(str(body["memory_id"]), hard=bool(body.get("hard", True)))
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "bad_request", "message": "observation_id or memory_id required"},
+        )
+
+    @app.post(f"{pref}/memories/{{memory_id}}/forget")
+    def forget_memory_post(
+        memory_id: str,
+        body: dict[str, Any] | None = None,
+        _: None = Depends(require_token),
+    ) -> dict[str, Any]:
+        hard = True if body is None else bool((body or {}).get("hard", True))
+        return service.forget_memory(memory_id, hard=hard)
+
     @app.post(f"{pref}/feedback")
     def feedback(body: FeedbackIn, _: None = Depends(require_token)) -> dict[str, Any]:
         return service.feedback(body)

@@ -1,10 +1,23 @@
 # MurasamePet 演化记忆状态机与证据更新规范（草案 V0.1）
 
+> **文档成熟度：Partial（规格超前于代码）**  
 > 目标：把心理学启发变成开发 Agent 可实现的算法规格。  
-> 总路线图：[`MNEMOSYNE_ROADMAP.md`](./MNEMOSYNE_ROADMAP.md)。  
-> 实现落点：`services/mnemosyne`（规则可换 LLM，协议先稳定）。
+> 总路线图：[`MNEMOSYNE_ROADMAP.md`](./MNEMOSYNE_ROADMAP.md) · 最终方案：[`MNEMOSYNE_2.0_FINAL_PLAN.md`](./MNEMOSYNE_2.0_FINAL_PLAN.md)。  
+> 实现落点：本仓库 `service/src/mnemosyne/`（规则可换 LLM，协议先稳定）。
 
 本文定义：**对象模型、状态、转移条件、证据类型、冲突与衰减、决策日志、验收测试**。阈值与权重字段均为**可配置默认值**，须用实验校准，不得当作心理学常数。
+
+### 与代码差距（必读）
+
+| 规格（本文） | 代码现状（PR #13） | 标注 |
+| --- | --- | --- |
+| Observation / Episode / Memory 多状态 | `MemoryStatus` 仅 `candidate\|active\|superseded\|invalidated` | Planned |
+| OBSERVED→…→ACTIVE 全链 | 对话观察可直接写 working+ACTIVE；consolidate→candidate；promote≈证据条数≥2 | Partial |
+| 证据分层 + 反证影响晋升 | `memory_evidence` 默认 supports；schema accommodate 有 counter；晋升不读反证 | Partial |
+| Decision Log / 兴趣态机 | 未实现 | Planned |
+| 删除观察级联派生 | P0 Safety Hardening 进行中 | Partial |
+
+完整状态机落地排在 **阶段 2 · P1 Cognitive Correctness**（方案：三生命周期，勿把所有阶段塞进单一 MemoryStatus）。
 
 ---
 

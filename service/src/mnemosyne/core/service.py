@@ -429,8 +429,108 @@ class MemoryService:
             self._emit(conn, et, {"memory_id": mem.id, "version": mem.version})
             return mem
 
+    def _cancel_tasks_for_resource(
+        self,
+        conn: sqlite3.Connection,
+        *,
+        observation_id: str | None = None,
+        memory_id: str | None = None,
+    ) -> int:
+        """取消仍可能重生已删内容的 pending/running 任务。"""
+        rows = conn.execute(
+            "SELECT id, payload_json FROM tasks WHERE status IN ('pending','running')"
+        ).fetchall()
+        n = 0
+        now = _now()
+        for row in rows:
+            payload = _loads(row["payload_json"], {})
+            hit = False
+            if observation_id and payload.get("observation_id") == observation_id:
+                hit = True
+            if memory_id and payload.get("memory_id") == memory_id:
+                hit = True
+            if not hit:
+                continue
+            conn.execute(
+                """
+                UPDATE tasks SET status='cancelled', last_error=?, updated_at=?
+                WHERE id=?
+                """,
+                ("resource_deleted", now, row["id"]),
+            )
+            n += 1
+        return n
+
+    def _scrub_schema_memory_refs(self, conn: sqlite3.Connection, memory_id: str) -> int:
+        """从 cognitive_schemas JSON 中移除 memory_id 引用（无法重建正文）。"""
+        try:
+            rows = conn.execute("SELECT id, payload_json FROM cognitive_schemas").fetchall()
+        except sqlite3.OperationalError:
+            return 0
+        n = 0
+        now = _now()
+        for row in rows:
+            payload = _loads(row["payload_json"], {})
+            changed = False
+            evid = dict(payload.get("evidence") or {})
+            for key in ("supporting", "counter", "memory_ids", "evidenceRefs"):
+                if key in evid and isinstance(evid[key], list):
+                    new_list = [x for x in evid[key] if str(x) != memory_id]
+                    if len(new_list) != len(evid[key]):
+                        evid[key] = new_list
+                        changed = True
+                if key in payload and isinstance(payload[key], list):
+                    new_list = [x for x in payload[key] if str(x) != memory_id]
+                    if len(new_list) != len(payload[key]):
+                        payload[key] = new_list
+                        changed = True
+            if evid:
+                payload["evidence"] = evid
+            if not changed:
+                continue
+            conn.execute(
+                "UPDATE cognitive_schemas SET payload_json=?, updated_at=? WHERE id=?",
+                (json.dumps(payload, ensure_ascii=False), now, row["id"]),
+            )
+            n += 1
+        return n
+
+    def _hard_delete_memory_conn(self, conn: sqlite3.Connection, memory_id: str) -> dict[str, Any]:
+        row = conn.execute("SELECT * FROM memories WHERE id=?", (memory_id,)).fetchone()
+        if not row:
+            return {"id": memory_id, "deleted": False, "detail": "not_found"}
+        conn.execute("DELETE FROM memories_fts WHERE memory_id=?", (memory_id,))
+        conn.execute("DELETE FROM memory_evidence WHERE memory_id=?", (memory_id,))
+        conn.execute("DELETE FROM memory_feedback WHERE memory_id=?", (memory_id,))
+        conn.execute(
+            "DELETE FROM memory_relations WHERE from_id=? OR to_id=?",
+            (memory_id, memory_id),
+        )
+        # 隐私遗忘：清除可重建正文的版本快照
+        conn.execute("DELETE FROM memory_versions WHERE memory_id=?", (memory_id,))
+        schema_scrubbed = self._scrub_schema_memory_refs(conn, memory_id)
+        cancelled = self._cancel_tasks_for_resource(conn, memory_id=memory_id)
+        conn.execute("DELETE FROM memories WHERE id=?", (memory_id,))
+        self._emit(
+            conn,
+            "memory.forgotten",
+            {
+                "memory_id": memory_id,
+                "hard": True,
+                "schema_scrubbed": schema_scrubbed,
+                "tasks_cancelled": cancelled,
+            },
+        )
+        return {
+            "id": memory_id,
+            "deleted": True,
+            "hard": True,
+            "schema_scrubbed": schema_scrubbed,
+            "tasks_cancelled": cancelled,
+        }
+
     def forget_memory(self, memory_id: str, *, hard: bool = False) -> dict[str, Any]:
-        """软删除默认：invalidated；hard=True 时清理主表+FTS+证据（版本保留审计）。"""
+        """软删除：invalidated；hard：清除主表/FTS/证据/关系/版本/schema 引用。"""
         if not hard:
             return self.update_memory(
                 memory_id,
@@ -440,12 +540,162 @@ class MemoryService:
             row = conn.execute("SELECT * FROM memories WHERE id=?", (memory_id,)).fetchone()
             if not row:
                 raise NotFoundError(f"memory not found: {memory_id}")
-            conn.execute("DELETE FROM memories_fts WHERE memory_id=?", (memory_id,))
-            conn.execute("DELETE FROM memory_evidence WHERE memory_id=?", (memory_id,))
-            conn.execute("DELETE FROM memory_feedback WHERE memory_id=?", (memory_id,))
-            conn.execute("DELETE FROM memories WHERE id=?", (memory_id,))
-            self._emit(conn, "memory.invalidated", {"memory_id": memory_id, "hard": True})
-            return {"id": memory_id, "deleted": True, "hard": True}
+            return self._hard_delete_memory_conn(conn, memory_id)
+
+    def build_deletion_plan(
+        self,
+        *,
+        observation_id: str | None = None,
+        memory_id: str | None = None,
+        hard: bool = True,
+    ) -> dict[str, Any]:
+        """只读：展示删除影响范围（不执行）。"""
+        conn = self.db.connect()
+        plan: dict[str, Any] = {
+            "hard": hard,
+            "observation_id": observation_id,
+            "memory_id": memory_id,
+            "memories": [],
+            "evidence_links": 0,
+            "relations": 0,
+            "pending_tasks": 0,
+            "schema_refs": 0,
+        }
+        mem_ids: set[str] = set()
+        if memory_id:
+            mem_ids.add(memory_id)
+        if observation_id:
+            for r in conn.execute(
+                "SELECT memory_id FROM memory_evidence WHERE observation_id=?",
+                (observation_id,),
+            ).fetchall():
+                mem_ids.add(r["memory_id"])
+            for r in conn.execute("SELECT id, source_ids_json FROM memories").fetchall():
+                sids = _loads(r["source_ids_json"], [])
+                if observation_id in sids:
+                    mem_ids.add(r["id"])
+        plan["memories"] = sorted(mem_ids)
+        if mem_ids:
+            placeholders = ",".join("?" * len(mem_ids))
+            plan["evidence_links"] = conn.execute(
+                f"SELECT COUNT(*) AS n FROM memory_evidence WHERE memory_id IN ({placeholders})",
+                tuple(mem_ids),
+            ).fetchone()["n"]
+            plan["relations"] = conn.execute(
+                f"""
+                SELECT COUNT(*) AS n FROM memory_relations
+                WHERE from_id IN ({placeholders}) OR to_id IN ({placeholders})
+                """,
+                tuple(mem_ids) + tuple(mem_ids),
+            ).fetchone()["n"]
+        # pending tasks
+        for r in conn.execute(
+            "SELECT payload_json FROM tasks WHERE status IN ('pending','running')"
+        ).fetchall():
+            p = _loads(r["payload_json"], {})
+            if observation_id and p.get("observation_id") == observation_id:
+                plan["pending_tasks"] += 1
+            elif memory_id and p.get("memory_id") == memory_id:
+                plan["pending_tasks"] += 1
+            elif p.get("memory_id") in mem_ids or p.get("observation_id") == observation_id:
+                plan["pending_tasks"] += 1
+        try:
+            for r in conn.execute("SELECT payload_json FROM cognitive_schemas").fetchall():
+                blob = json.dumps(_loads(r["payload_json"], {}), ensure_ascii=False)
+                if any(mid in blob for mid in mem_ids):
+                    plan["schema_refs"] += 1
+        except sqlite3.OperationalError:
+            pass
+        return plan
+
+    def delete_observation(
+        self,
+        observation_id: str,
+        *,
+        hard: bool = True,
+        cascade_memories: bool = True,
+    ) -> dict[str, Any]:
+        """删除观察；默认级联 hard-forget 仅以该观察为唯一来源的派生记忆。"""
+        with self.db.transaction() as conn:
+            row = conn.execute(
+                "SELECT * FROM observations WHERE id=?", (observation_id,)
+            ).fetchone()
+            if not row:
+                raise NotFoundError(f"observation not found: {observation_id}")
+
+            linked = [
+                r["memory_id"]
+                for r in conn.execute(
+                    "SELECT DISTINCT memory_id FROM memory_evidence WHERE observation_id=?",
+                    (observation_id,),
+                ).fetchall()
+            ]
+            # 也扫 source_ids
+            for r in conn.execute("SELECT id, source_ids_json FROM memories").fetchall():
+                sids = _loads(r["source_ids_json"], [])
+                if observation_id in sids and r["id"] not in linked:
+                    linked.append(r["id"])
+
+            forgotten: list[dict[str, Any]] = []
+            invalidated: list[str] = []
+            if cascade_memories:
+                for mid in linked:
+                    ev_rows = conn.execute(
+                        "SELECT observation_id FROM memory_evidence WHERE memory_id=?",
+                        (mid,),
+                    ).fetchall()
+                    other_sources = [
+                        e["observation_id"] for e in ev_rows if e["observation_id"] != observation_id
+                    ]
+                    if hard and not other_sources:
+                        forgotten.append(self._hard_delete_memory_conn(conn, mid))
+                    else:
+                        # 去掉该观察证据；若仍有其他来源则仅剥离链接
+                        conn.execute(
+                            "DELETE FROM memory_evidence WHERE memory_id=? AND observation_id=?",
+                            (mid, observation_id),
+                        )
+                        mem = conn.execute(
+                            "SELECT source_ids_json, version FROM memories WHERE id=?",
+                            (mid,),
+                        ).fetchone()
+                        if mem:
+                            sids = [s for s in _loads(mem["source_ids_json"], []) if s != observation_id]
+                            conn.execute(
+                                "UPDATE memories SET source_ids_json=?, updated_at=? WHERE id=?",
+                                (json.dumps(sids, ensure_ascii=False), _now(), mid),
+                            )
+                        if hard and not other_sources:
+                            pass
+                        elif not other_sources:
+                            conn.execute(
+                                "UPDATE memories SET status=?, updated_at=? WHERE id=?",
+                                (MemoryStatus.INVALIDATED.value, _now(), mid),
+                            )
+                            invalidated.append(mid)
+
+            cancelled = self._cancel_tasks_for_resource(conn, observation_id=observation_id)
+            conn.execute("DELETE FROM memory_evidence WHERE observation_id=?", (observation_id,))
+            conn.execute("DELETE FROM observations WHERE id=?", (observation_id,))
+            self._emit(
+                conn,
+                "observation.deleted",
+                {
+                    "observation_id": observation_id,
+                    "hard": hard,
+                    "forgotten": [f.get("id") for f in forgotten],
+                    "invalidated": invalidated,
+                    "tasks_cancelled": cancelled,
+                },
+            )
+            return {
+                "observation_id": observation_id,
+                "deleted": True,
+                "hard": hard,
+                "forgotten_memories": forgotten,
+                "invalidated_memories": invalidated,
+                "tasks_cancelled": cancelled,
+            }
 
     def search(self, q: SearchQuery) -> list[Memory]:
         conn = self.db.connect()

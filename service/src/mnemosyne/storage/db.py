@@ -55,3 +55,9 @@ class Database:
             except Exception:
                 conn.rollback()
                 raise
+
+    @contextmanager
+    def exclusive(self) -> Iterator[sqlite3.Connection]:
+        """读路径：持锁拿到连接（调用方负责 commit 若开了隐式事务）。"""
+        with self._lock:
+            yield self.connect()

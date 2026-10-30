@@ -141,3 +141,94 @@ class Task(BaseModel):
     last_error: str = ""
     created_at: str
     updated_at: str
+
+
+class MemoryRelationIn(BaseModel):
+    from_id: str
+    to_id: str
+    relation: str
+    note: str = ""
+    confidence: float | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class RetrieveIn(BaseModel):
+    """统一检索入口（含触发规划）。"""
+
+    query: str = ""
+    force: bool = False
+    limit: int = 8
+    mode: str = "current"
+    token_budget: int | None = None
+    types: list[MemoryType] | None = None
+    session_id: str | None = None
+
+
+class ChangeDetectIn(BaseModel):
+    observation_id: str
+    dry_run: bool = True
+
+
+class ChangePlanBuildIn(BaseModel):
+    observation_id: str
+    dry_run: bool = True
+    persist: bool = True
+
+
+class ChangePlanApplyIn(BaseModel):
+    confirm: bool = False
+
+
+class SchemaDiscoverIn(BaseModel):
+    limit_memories: int = 200
+    min_cluster: int = 3
+    min_similarity: float = 0.22
+    persist: bool = True
+
+
+class SchemaAssimilateIn(BaseModel):
+    memory_ids: list[str] = Field(default_factory=list)
+    note: str = ""
+
+
+class SchemaAccommodateIn(BaseModel):
+    memory_ids: list[str] = Field(default_factory=list)
+    counter_note: str = ""
+    propose_split: bool = True
+
+
+class CognitiveChangePlanIn(BaseModel):
+    operation: str = "UPDATE"
+    target_schema_ids: list[str] = Field(default_factory=list)
+    evidence_refs: list[str] = Field(default_factory=list)
+    expected_impact: list[str] = Field(default_factory=list)
+    risk_level: str = "MEDIUM"
+    approval_required: bool = True
+    reason: str = ""
+
+
+class CognitiveChangePlanApplyIn(BaseModel):
+    confirm: bool = False
+
+
+class CapabilityCheckIn(BaseModel):
+    capability: str
+
+
+class CapabilitySetIn(BaseModel):
+    capability: str
+    level: str
+    enabled: bool | None = None
+    actor: str = "external_governance"
+
+
+class ReflectionIn(BaseModel):
+    judgment: str = ""
+    schema_ids: list[str] = Field(default_factory=list)
+    memory_ids: list[str] = Field(default_factory=list)
+
+
+class ValueAnalyzeIn(BaseModel):
+    intent: str
+    stakeholders: list[str] = Field(default_factory=list)
+    proposed_action: str = ""

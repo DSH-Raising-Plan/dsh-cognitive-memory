@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
+import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { MemoryClient } from './memory-client.js';
 import { MemoryProcessHost } from './memory-process.js';
@@ -15,10 +16,12 @@ import {
   healthToolSpec,
   observeToolSpec,
   proposeToolSpec,
+  retrieveToolSpec,
   searchToolSpec,
   taskToolSpec,
   updateToolSpec,
 } from './tool-spec.js';
+import { CaptureQueue } from './capture-queue.js';
 
 export const name = 'dsh-mnemosyne';
 export const inject = ['tools'];
@@ -136,6 +139,20 @@ export async function apply(ctx) {
       },
     }),
     defineTool({
+      ...retrieveToolSpec(),
+      async execute(args) {
+        const c = await ensureClient();
+        return c.retrieve({
+          query: args.query,
+          force: Boolean(args.force),
+          limit: args.limit ?? 8,
+          mode: args.mode || 'current',
+          session_id: args.session_id,
+          token_budget: args.token_budget,
+        });
+      },
+    }),
+    defineTool({
       ...proposeToolSpec(),
       async execute(args) {
         const c = await ensureClient();
@@ -198,11 +215,44 @@ export async function apply(ctx) {
   let offFlush = null;
   const pendingCaptures = new Set();
   const latestAssistant = new Map();
+  const durableCapture = cfg.durable_capture !== false;
+  const queuePath = cfg.capture_queue_path
+    || path.join(host.dataDir, 'runtime', 'capture-queue.jsonl');
+  const captureQueue = durableCapture ? new CaptureQueue({ filePath: queuePath }) : null;
+
+  async function sendObserve(payload) {
+    const c = await ensureClient();
+    await c.observe(payload);
+  }
+
+  async function drainCaptureQueue() {
+    if (!captureQueue) return;
+    await captureQueue.drain(async (item) => {
+      await sendObserve({
+        content: item.content,
+        source_kind: 'dialog',
+        producer: 'dsh.host',
+        correlation_id: item.correlation_id,
+        occurred_at: item.occurred_at,
+        metadata: item.metadata || {},
+        idempotency_key: item.idempotency_key,
+      });
+    });
+  }
+
+  // Replay durable leftovers from previous crash (best-effort, non-blocking).
+  if (captureQueue) {
+    drainCaptureQueue().catch((err) => {
+      if (process.env.DSH_MEMORY_DEBUG) {
+        process.stderr.write(`[mnemosyne] capture replay: ${err}\n`);
+      }
+    });
+  }
+
   if (cfg.auto_capture !== false && typeof ctx.on === 'function') {
     offFlush = ctx.on('session/flush', async () => {
-      // Durability checkpoint: do not let the process exit before the
-      // fire-and-forget observation requests have reached the service.
       await Promise.allSettled([...pendingCaptures]);
+      await drainCaptureQueue();
     });
     offSession = ctx.on('session/event', (session, event) => {
       try {
@@ -222,17 +272,33 @@ export async function apply(ctx) {
             role,
             source: source ?? null,
           };
+          const payload = {
+            content: text,
+            correlation_id: sessionId,
+            occurred_at: occurredAt,
+            metadata,
+            idempotency_key: `dsh:${sessionId}:${Number(seq) || 0}`,
+          };
+          if (captureQueue) {
+            try { captureQueue.enqueue(payload); } catch { /* ignore disk errors */ }
+          }
           const task = (async () => {
-            const c = await ensureClient();
-            await c.observe({
-              content: text,
+            await sendObserve({
+              content: payload.content,
               source_kind: 'dialog',
               producer: 'dsh.host',
-              correlation_id: sessionId,
-              occurred_at: occurredAt,
-              metadata,
-              idempotency_key: `dsh:${sessionId}:${Number(seq) || 0}`,
+              correlation_id: payload.correlation_id,
+              occurred_at: payload.occurred_at,
+              metadata: payload.metadata,
+              idempotency_key: payload.idempotency_key,
             });
+            // Successful send: drop matching durable rows on next drain (idempotent key).
+            if (captureQueue) {
+              const left = captureQueue.peekAll().filter(
+                (it) => it.idempotency_key !== payload.idempotency_key,
+              );
+              captureQueue.rewrite(left);
+            }
           })().catch((err) => {
             if (process.env.DSH_MEMORY_DEBUG) {
               process.stderr.write(`[mnemosyne] auto-capture skipped: ${err}\n`);
@@ -250,8 +316,6 @@ export async function apply(ctx) {
         if (type === 'assistant/message') {
           const message = data.message;
           if (!message || message.role !== 'assistant') return;
-          // Keep only the last assistant message of the turn; intermediate
-          // steps are tool-call/reasoning traffic. Persist at turn/end.
           latestAssistant.set(sessionId, {
             content: message.content,
             seq: event.seq,
@@ -260,7 +324,6 @@ export async function apply(ctx) {
           });
           return;
         }
-        // turn/end: flush the final visible answer, not the thinking stream.
         const last = latestAssistant.get(sessionId);
         latestAssistant.delete(sessionId);
         if (last) {

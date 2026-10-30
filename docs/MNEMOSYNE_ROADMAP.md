@@ -1,9 +1,8 @@
 # DSH / MurasamePet：记忆链算法优化清单与可借鉴项目
 
-> 用途：后续架构设计与开发排期。  
-> 愿景与拟人化价值见 [`../services/mnemosyne/README.md`](../services/mnemosyne/README.md)。  
+> **成熟度：Partial** — 与根目录 [`ROADMAP.md`](../ROADMAP.md) 同源意图；执行顺序以 [MNEMOSYNE_2.0_FINAL_PLAN.md](./MNEMOSYNE_2.0_FINAL_PLAN.md) 为准。  
 > 落地索引见 [`MNEMOSYNE_SPEC.md`](./MNEMOSYNE_SPEC.md)。  
-> 状态机与证据规则规格见 [`MNEMOSYNE_STATE_MACHINE.md`](./MNEMOSYNE_STATE_MACHINE.md)。
+> 状态机规格见 [`MNEMOSYNE_STATE_MACHINE.md`](./MNEMOSYNE_STATE_MACHINE.md)（超前于代码）。
 
 ## 核心链路
 

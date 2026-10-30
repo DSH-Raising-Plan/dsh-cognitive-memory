@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mnemosyne.local/schemas/universal-data-model/v1.json",
+  "title": "Mnemosyne Universal Data Model Envelope",
+  "description": "Canonical core + namespaced extensions. External payloads are preserved; they do not become personal facts automatically.",
+  "type": "object",
+  "required": ["udm_version", "kind", "id", "recorded_at", "canonical", "provenance"],
+  "additionalProperties": false,
+  "properties": {
+    "udm_version": { "type": "string", "const": "1.0" },
+    "kind": {
+      "type": "string",
+      "enum": ["observation", "evidence", "memory", "schema", "interest_signal", "exchange"]
+    },
+    "id": { "type": "string" },
+    "recorded_at": { "type": "string" },
+    "event_time": { "type": ["string", "null"] },
+    "canonical": {
+      "type": "object",
+      "required": ["content"],
+      "properties": {
+        "content": { "type": "string" },
+        "status": { "type": "string" },
+        "type": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "extensions": {
+      "type": "object",
+      "description": "Namespaced extensions, e.g. dsh.*, agent.*",
+      "additionalProperties": true
+    },
+    "original_payload": {
+      "description": "Opaque original external payload",
+      "type": ["object", "array", "string", "null"]
+    },
+    "external_ids": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["producer", "source_node"],
+      "properties": {
+        "producer": { "type": "string" },
+        "source_node": { "type": "string" },
+        "correlation_id": { "type": ["string", "null"] },
+        "trust": { "type": "string", "enum": ["local", "authorized_peer", "untrusted"], "default": "local" }
+      },
+      "additionalProperties": true
+    },
+    "schema_version": { "type": "string", "default": "1.0" }
+  }
+}

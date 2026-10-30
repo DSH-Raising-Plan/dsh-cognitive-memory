@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.4 — P3 Universal Ecosystem (foundation)
+
+- Schemas: Component Contract / UDM / Events / PCIP exchange (`schemas/`)
+- Docs: `PCIP.md`, `COMPONENT_CONTRACT.md`, `INTEROPERABILITY.md`
+- Interop validators + UDM mapping; Discovery API `/api/v1/discovery`
+- PCIP stub: L3 default deny; inbound → Observation only
+- Thin SDKs: `packages/mnemosyne-sdk` (Python), `packages/mnemosyne-sdk-ts` (TS)
+
 ## 0.3.3 — P2 Integration & Production
 
 - MCP 工具对齐 Host：`memory_retrieve` / `memory_observe` / `memory_health`；官方 SDK 优先、JSON-RPC 回退

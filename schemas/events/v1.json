@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mnemosyne.local/schemas/events/v1.json",
+  "title": "Mnemosyne Universal Event Envelope",
+  "type": "object",
+  "required": ["event_id", "event_type", "event_version", "occurred_at", "recorded_at", "producer", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "event_id": { "type": "string" },
+    "event_type": { "type": "string" },
+    "event_version": { "type": "integer", "minimum": 1 },
+    "occurred_at": { "type": "string" },
+    "recorded_at": { "type": "string" },
+    "producer": { "type": "string" },
+    "correlation_id": { "type": ["string", "null"] },
+    "causation_id": { "type": ["string", "null"] },
+    "payload_version": { "type": "integer", "minimum": 1, "default": 1 },
+    "payload": { "type": "object" }
+  }
+}

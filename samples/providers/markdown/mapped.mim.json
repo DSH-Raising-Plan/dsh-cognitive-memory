@@ -1,0 +1,27 @@
+{
+  "mim_version": "0.1-draft",
+  "bundle_id": "sample-markdown-001",
+  "exported_at": "2026-03-30T06:00:00Z",
+  "source": {
+    "provider": "markdown",
+    "instance": "samples/providers/markdown/note.md",
+    "export_tool": "manual-draft"
+  },
+  "items": [
+    {
+      "external_id": "markdown:note.md#Local-lab-notes",
+      "content": "Foundation 1.0 is stable on loopback. Migration design starts on a parallel track without touching REST/PCIP contracts.",
+      "kind": "note",
+      "event_time": "2026-03-12T00:00:00Z",
+      "provenance": {
+        "provider": "markdown",
+        "raw_ref": "samples/providers/markdown/note.md",
+        "trust_hint": "user_asserted"
+      },
+      "tags": ["lab", "mnemosyne"],
+      "metadata": {
+        "title": "Local lab notes"
+      }
+    }
+  ]
+}

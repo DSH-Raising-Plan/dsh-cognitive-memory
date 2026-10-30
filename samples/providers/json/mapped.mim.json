@@ -1,0 +1,46 @@
+{
+  "mim_version": "0.1-draft",
+  "bundle_id": "sample-json-001",
+  "exported_at": "2026-03-30T06:00:00Z",
+  "source": {
+    "provider": "json",
+    "instance": "samples/providers/json/sample.jsonl",
+    "export_tool": "manual-draft"
+  },
+  "items": [
+    {
+      "external_id": "j1",
+      "content": "User prefers quiet mornings for deep work.",
+      "kind": "fact",
+      "recorded_at": "2026-03-01T08:00:00Z",
+      "provenance": {
+        "provider": "json",
+        "raw_ref": "sample.jsonl:1",
+        "trust_hint": "untrusted"
+      },
+      "tags": ["preference"],
+      "payload": {
+        "id": "j1",
+        "text": "User prefers quiet mornings for deep work.",
+        "created_at": "2026-03-01T08:00:00Z",
+        "tags": ["preference"]
+      }
+    },
+    {
+      "external_id": "j2",
+      "content": "Deployed Mnemosyne Foundation 1.0 locally.",
+      "kind": "episode",
+      "recorded_at": "2026-03-10T12:30:00Z",
+      "provenance": {
+        "provider": "json",
+        "raw_ref": "sample.jsonl:2",
+        "trust_hint": "untrusted"
+      },
+      "payload": {
+        "id": "j2",
+        "content": "Deployed Mnemosyne Foundation 1.0 locally.",
+        "timestamp": "2026-03-10T12:30:00Z"
+      }
+    }
+  ]
+}

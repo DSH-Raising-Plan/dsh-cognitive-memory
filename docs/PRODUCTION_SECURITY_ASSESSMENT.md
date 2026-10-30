@@ -1,8 +1,9 @@
 # Production Security Assessment（下一阶段 · 先报告、不开 PR）
 
-> 状态：**Next**（评估中 / 待启动）  
+> 状态：**Report complete（决策待定）**  
+> 差距报告：[`reports/PRODUCTION_SECURITY_GAP_REPORT.md`](./reports/PRODUCTION_SECURITY_GAP_REPORT.md)  
 > 目标：按**风险、攻击面、修复成本、兼容性影响**排序剩余问题，再决定是否进入生产加固。  
-> **本阶段交付物是评估报告，不是功能 PR。**
+> **本阶段交付物是评估报告，不是功能 PR。** 加固 PR 仅在评估结论驱动时再开。
 
 ## 原则
 

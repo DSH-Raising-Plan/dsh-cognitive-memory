@@ -1,6 +1,6 @@
 {
   "name": "dsh-mnemosyne",
-  "version": "0.2.0",
+  "version": "0.3.4",
   "description": "DeepSeek Harness 演化记忆系统：证据、时间、情境、状态演化、情绪与纠错",
   "keywords": [
     "dsh",
@@ -39,14 +39,16 @@
     "CHANGELOG.md",
     "LICENSE",
     "test",
-    "test-support"
+    "test-support",
+    "schemas",
+    "packages"
   ],
   "engines": {
     "node": ">=20"
   },
   "scripts": {
     "test": "node --test test/*.mjs",
-    "check": "node --check src/index.js && node --check src/memory-client.js && node --check src/memory-process.js && node --check src/tool-spec.js"
+    "check": "node --check src/index.js && node --check src/memory-client.js && node --check src/memory-process.js && node --check src/tool-spec.js && node --check src/capture-queue.js"
   },
   "peerDependencies": {
     "@deepseek-ai/dsh-tools": ">=0.1.0-rc.7"

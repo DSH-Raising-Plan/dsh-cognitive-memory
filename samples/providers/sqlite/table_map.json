@@ -1,0 +1,18 @@
+{
+  "provider": "sqlite",
+  "instance": "samples/providers/sqlite/sample.sqlite",
+  "tables": {
+    "memories": {
+      "external_id": "memories:{id}",
+      "content": "body",
+      "kind": "kind",
+      "recorded_at": "created_at"
+    },
+    "links": {
+      "relation_table": true,
+      "from_external_id": "memories:{from_id}",
+      "to_external_id": "memories:{to_id}",
+      "relation": "rel"
+    }
+  }
+}

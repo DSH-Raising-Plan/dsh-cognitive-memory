@@ -7,7 +7,13 @@ import json
 import sqlite3
 
 from mnemosyne.core.service import MemoryService
-from mnemosyne.domain.models import MemoryProposeIn, MemoryStatus, MemoryType, SourceKind
+from mnemosyne.domain.models import (
+    MemoryProposeIn,
+    MemoryStatus,
+    MemoryType,
+    ObservationStatus,
+    SourceKind,
+)
 
 
 def consolidate_observation(service: MemoryService, observation_id: str) -> str | None:
@@ -16,6 +22,9 @@ def consolidate_observation(service: MemoryService, observation_id: str) -> str 
     conn = service.db.connect()
     row = conn.execute("SELECT * FROM observations WHERE id=?", (observation_id,)).fetchone()
     if not row:
+        return None
+    keys = set(row.keys())
+    if "status" in keys and row["status"] == ObservationStatus.DELETED.value:
         return None
     # 已有以该观察为证据的 episodic → 跳过
     exists = conn.execute(
@@ -57,4 +66,8 @@ def consolidate_observation(service: MemoryService, observation_id: str) -> str 
             idempotency_key=f"consol:{observation_id}",
         )
     )
+    try:
+        service.set_observation_status(observation_id, ObservationStatus.PROCESSED)
+    except Exception:
+        pass
     return mem.id

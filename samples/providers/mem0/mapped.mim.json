@@ -1,0 +1,57 @@
+{
+  "mim_version": "0.1",
+  "bundle_id": "sample-mem0-001",
+  "exported_at": "2026-03-30T06:00:00Z",
+  "source": {
+    "provider": "mem0",
+    "instance": "fixture:samples/providers/mem0/fixture_export.json",
+    "export_tool": "manual-draft"
+  },
+  "items": [
+    {
+      "external_id": "mem0_abc123",
+      "content": "User works mainly in Asia/Shanghai timezone.",
+      "kind": "fact",
+      "recorded_at": "2026-03-08T09:15:00Z",
+      "provenance": {
+        "provider": "mem0",
+        "raw_ref": "mem0:mem0_abc123",
+        "trust_hint": "untrusted"
+      },
+      "identity_keys": {
+        "user_id": "user_demo",
+        "agent_id": "agent_lab"
+      },
+      "metadata": { "source": "chat" },
+      "payload": {
+        "id": "mem0_abc123",
+        "memory": "User works mainly in Asia/Shanghai timezone.",
+        "created_at": "2026-03-08T09:15:00Z",
+        "updated_at": "2026-03-08T09:15:00Z"
+      }
+    },
+    {
+      "external_id": "mem0_def456",
+      "content": "Asked to keep migration preview before any commit.",
+      "kind": "episode",
+      "event_time": "2026-03-20T14:00:00Z",
+      "recorded_at": "2026-03-21T01:00:00Z",
+      "provenance": {
+        "provider": "mem0",
+        "raw_ref": "mem0:mem0_def456",
+        "trust_hint": "untrusted"
+      },
+      "identity_keys": {
+        "user_id": "user_demo",
+        "run_id": "run_42"
+      },
+      "metadata": { "topic": "migration" },
+      "payload": {
+        "id": "mem0_def456",
+        "memory": "Asked to keep migration preview before any commit.",
+        "created_at": "2026-03-20T14:00:00Z",
+        "updated_at": "2026-03-21T01:00:00Z"
+      }
+    }
+  ]
+}

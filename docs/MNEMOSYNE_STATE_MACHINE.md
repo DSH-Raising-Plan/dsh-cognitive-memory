@@ -1,10 +1,24 @@
 # MurasamePet 演化记忆状态机与证据更新规范（草案 V0.1）
 
+> **文档成熟度：Partial（规格超前于代码）**  
 > 目标：把心理学启发变成开发 Agent 可实现的算法规格。  
-> 总路线图：[`MNEMOSYNE_ROADMAP.md`](./MNEMOSYNE_ROADMAP.md)。  
-> 实现落点：`services/mnemosyne`（规则可换 LLM，协议先稳定）。
+> 总路线图：[`MNEMOSYNE_ROADMAP.md`](./MNEMOSYNE_ROADMAP.md) · 最终方案：[`MNEMOSYNE_2.0_FINAL_PLAN.md`](./MNEMOSYNE_2.0_FINAL_PLAN.md)。  
+> 实现落点：本仓库 `service/src/mnemosyne/`（规则可换 LLM，协议先稳定）。
 
 本文定义：**对象模型、状态、转移条件、证据类型、冲突与衰减、决策日志、验收测试**。阈值与权重字段均为**可配置默认值**，须用实验校准，不得当作心理学常数。
+
+### 与代码差距（必读 · 随 P1 更新）
+
+| 规格（本文） | 代码现状 | 标注 |
+| --- | --- | --- |
+| Observation / Episode / Memory 分生命周期 | `ObservationStatus` + `MemoryStatus`（含 needs_review/archived）；Episode 枚举已定义，情节仍以 `type=episodic` Memory 承载 | Partial |
+| 证据独立实体 + 反证影响晋升 | `evidences` 表 + API；`promote_v2` 读反证与来源独立性 | Implemented（规则版） |
+| Decision Log | `decision_logs` + `/decisions` | Implemented |
+| 兴趣专用态机 / InterestSignal | 表 `interest_signals` 已建；晋升规则未完整接入 | Partial |
+| Events vs Tasks | 见 [EVENTS_TASKS_CONTRACT.md](./EVENTS_TASKS_CONTRACT.md)：Tasks=业务执行 | Implemented（契约） |
+| 删除观察级联派生 | P0 Safety Hardening | Implemented |
+
+完整心理学门槛校准与兴趣态机仍属后续实验；本文其余章节多为 **Planned 规格**，实现以代码与 OpenAPI 为准。
 
 ---
 

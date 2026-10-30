@@ -1,5 +1,8 @@
 # 试用立场：值得用，还不值得只信它
 
+> 成熟度：**Partial**（可并行试用；未达主记忆 / Safe Upgrade Candidate）  
+> 路线：[docs/MNEMOSYNE_2.0_FINAL_PLAN.md](./docs/MNEMOSYNE_2.0_FINAL_PLAN.md)
+
 本插件 / 服务当前定位是 **副记忆（并行观察）**，不是「唯一记忆」。
 
 ## 推荐用法
@@ -33,12 +36,14 @@ python -m mnemosyne.cli migrate-amem --jsonl path/to/export.jsonl
 
 ## 什么时候可以当主记忆
 
-| 门槛 | 状态 |
-| --- | --- |
-| `dsh plugin add` 后零配置能起（或 README 配置真生效） | ⏳ 仓库已内含 `service/`；装进 profile 后仍须验证目录是否完整拷贝 |
-| 真实对话：`observe` → 下一轮自动 `context`，并有延迟/准确率 | ❌ 未验收 |
-| 备份 / 导出 / 旧记忆迁移有可执行答案 | ✅ CLI 有；日常习惯与文档仍须跟上 |
-| 最小 CI（插件 + 服务 + 一次端到端） | ⏳ 插件 + 服务单测已在 `.github/workflows/ci.yml`（`plugin/dsh` / `main` 绿）；端到端对话闭环仍未进 CI |
-| 连续一周无丢数据 / 串记忆 | ❌ 未跑 |
+| 门槛 | 成熟度 | 说明 |
+| --- | --- | --- |
+| `dsh plugin add` 后零配置能起 | Planned | 仓库含 `service/`；装进 profile 后**尚未现场验收** |
+| 真实对话：`observe` → 下一轮自动 `context` | Planned | Host mock 测 ≠ 真 DSH E2E |
+| 备份 / 导出 / 迁移 | Partial | CLI 有；完整 round-trip + 升级前备份见 P0 |
+| 进程锁 + 删除级联（Safe Upgrade） | Partial | P0 Safety Hardening |
+| 最小 CI（插件 + 服务 + 端到端） | Partial | 单元/契约有；对话闭环未进 CI |
+| 连续一周无丢 / 串记忆 | Planned | 未跑 |
+| 正式 MCP 标准客户端 | Planned | 当前自研 JSON-RPC 桩 |
 
 **一句话：** 现在值得用、值得每天用；证明不会把经历弄丢或弄错之前，先当副记忆。

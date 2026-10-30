@@ -21,6 +21,8 @@ EXPECTED_CORE_TABLES = {
     "outbox",
     "inbox",
     "tasks",
+    "evidences",
+    "decision_logs",
 }
 
 

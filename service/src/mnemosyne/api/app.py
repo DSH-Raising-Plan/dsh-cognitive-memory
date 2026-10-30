@@ -20,6 +20,7 @@ from mnemosyne.domain.models import (
     CognitiveChangePlanApplyIn,
     CognitiveChangePlanIn,
     ContextBuildIn,
+    EvidenceIn,
     FeedbackIn,
     MemoryProposeIn,
     MemoryRelationIn,
@@ -118,6 +119,16 @@ def create_app(
         dump["write_stages"] = ["RECEIVED", "PERSISTED", "INDEXED", "VERIFIED"]
         return dump
 
+    @app.get(f"{pref}/observations/{{observation_id}}")
+    def get_observation(observation_id: str, _: None = Depends(require_token)) -> dict[str, Any]:
+        row = service.get_observation(observation_id)
+        if not row:
+            raise HTTPException(
+                status_code=404,
+                detail={"code": "not_found", "message": f"observation not found: {observation_id}"},
+            )
+        return row
+
     @app.delete(f"{pref}/observations/{{observation_id}}")
     def delete_observation(
         observation_id: str,
@@ -128,6 +139,36 @@ def create_app(
         return service.delete_observation(
             observation_id, hard=hard, cascade_memories=cascade_memories
         )
+
+    @app.post(f"{pref}/evidences")
+    def create_evidence(body: EvidenceIn, _: None = Depends(require_token)) -> dict[str, Any]:
+        return service.add_evidence(body).model_dump()
+
+    @app.get(f"{pref}/memories/{{memory_id}}/evidences")
+    def list_memory_evidences(
+        memory_id: str,
+        evidence_type: str | None = None,
+        _: None = Depends(require_token),
+    ) -> dict[str, Any]:
+        items = service.list_evidence(
+            subject_kind="memory", subject_id=memory_id, evidence_type=evidence_type
+        )
+        return {"items": items, "count": len(items)}
+
+    @app.post(f"{pref}/memories/{{memory_id}}/promote-check")
+    def promote_check(memory_id: str, _: None = Depends(require_token)) -> dict[str, Any]:
+        from mnemosyne.cognition.promote import evaluate_and_apply
+
+        return evaluate_and_apply(service, memory_id)
+
+    @app.get(f"{pref}/decisions")
+    def list_decisions(
+        subject_id: str | None = None,
+        limit: int = 40,
+        _: None = Depends(require_token),
+    ) -> dict[str, Any]:
+        items = service.list_decision_logs(subject_id=subject_id, limit=limit)
+        return {"items": items, "count": len(items)}
 
     @app.post(f"{pref}/privacy/deletion-plan")
     def privacy_deletion_plan(body: dict[str, Any], _: None = Depends(require_token)) -> dict[str, Any]:

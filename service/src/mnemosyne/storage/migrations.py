@@ -223,6 +223,67 @@ MIGRATIONS: list[tuple[str, str]] = [
         CREATE INDEX IF NOT EXISTS idx_observations_correlation ON observations(correlation_id);
         """,
     ),
+    (
+        "003_cognitive_correctness",
+        """
+        ALTER TABLE observations ADD COLUMN status TEXT NOT NULL DEFAULT 'observed';
+
+        ALTER TABLE memories ADD COLUMN event_time TEXT;
+        ALTER TABLE memories ADD COLUMN valid_from TEXT;
+        ALTER TABLE memories ADD COLUMN valid_until TEXT;
+
+        CREATE TABLE IF NOT EXISTS evidences (
+          id TEXT PRIMARY KEY,
+          subject_kind TEXT NOT NULL DEFAULT 'memory',
+          subject_id TEXT NOT NULL,
+          source_type TEXT NOT NULL,
+          source_id TEXT NOT NULL,
+          evidence_type TEXT NOT NULL DEFAULT 'supports',
+          content_ref TEXT,
+          confidence REAL,
+          observed_at TEXT,
+          recorded_at TEXT NOT NULL,
+          provenance_json TEXT NOT NULL DEFAULT '{}',
+          metadata_json TEXT NOT NULL DEFAULT '{}',
+          UNIQUE(subject_kind, subject_id, source_type, source_id, evidence_type)
+        );
+        CREATE INDEX IF NOT EXISTS idx_evidences_subject
+          ON evidences(subject_kind, subject_id, evidence_type);
+        CREATE INDEX IF NOT EXISTS idx_evidences_source
+          ON evidences(source_type, source_id);
+
+        CREATE TABLE IF NOT EXISTS decision_logs (
+          id TEXT PRIMARY KEY,
+          subject_id TEXT NOT NULL,
+          subject_kind TEXT NOT NULL DEFAULT 'memory',
+          decision_type TEXT NOT NULL,
+          strategy_version TEXT NOT NULL DEFAULT 'promote_v2',
+          outcome TEXT NOT NULL,
+          evidence_ids_json TEXT NOT NULL DEFAULT '[]',
+          scores_json TEXT NOT NULL DEFAULT '{}',
+          reason TEXT NOT NULL DEFAULT '',
+          needs_human INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_decision_logs_subject
+          ON decision_logs(subject_kind, subject_id, created_at);
+
+        CREATE TABLE IF NOT EXISTS interest_signals (
+          id TEXT PRIMARY KEY,
+          subject_id TEXT,
+          topic_id TEXT NOT NULL DEFAULT '',
+          signal_type TEXT NOT NULL DEFAULT 'attention',
+          strength REAL NOT NULL DEFAULT 0.5,
+          source_observation_id TEXT,
+          confidence REAL,
+          created_at TEXT NOT NULL,
+          expires_at TEXT,
+          metadata_json TEXT NOT NULL DEFAULT '{}'
+        );
+        CREATE INDEX IF NOT EXISTS idx_interest_signals_topic
+          ON interest_signals(topic_id, created_at);
+        """,
+    ),
 ]
 
 

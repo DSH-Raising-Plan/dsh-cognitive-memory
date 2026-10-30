@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.5 — P3.1 Foundation Stabilization
+
+- Freeze acceptance on `docs/P3_FOUNDATION_ACCEPTANCE.md`; baseline `foundation-0.1.0`
+- Independent Schema/API/PCIP versions (`schemas/VERSIONS.json`); Discovery exposes baseline
+- Validator subset frozen (`docs/VALIDATOR_SUBSET.md`); compat + SDK path parity tests
+- CI job `foundation-stabilization` runs unit suite + external 12-probe + stability report
+- Clean-env reproduce guide; known limits + compatibility matrix
+
 ## 0.3.4 — P3 Universal Ecosystem (foundation)
 
 - Schemas: Component Contract / UDM / Events / PCIP exchange (`schemas/`)

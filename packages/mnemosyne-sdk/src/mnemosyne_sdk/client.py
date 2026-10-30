@@ -5,8 +5,14 @@ from typing import Any
 
 import httpx
 
+from mnemosyne_sdk.paths import FOUNDATION_PATHS
+
 
 class MnemosyneClient:
+    """Thin REST client. Core methods share paths with the TS SDK."""
+
+    PATHS = FOUNDATION_PATHS
+
     def __init__(
         self,
         base_url: str,
@@ -42,17 +48,31 @@ class MnemosyneClient:
             return res.json()
 
     def health(self) -> Any:
-        return self.request("GET", "/api/v1/health")
+        m, p = self.PATHS["health"]
+        return self.request(m, p)
 
     def discovery(self) -> Any:
-        return self.request("GET", "/api/v1/discovery")
+        m, p = self.PATHS["discovery"]
+        return self.request(m, p)
 
-    def observe(self, content: str, *, source_kind: str = "dialog", **extra: Any) -> Any:
-        body = {"content": content, "source_kind": source_kind, "producer": "sdk.python", **extra}
-        return self.request("POST", "/api/v1/observations", body)
+    def observe(self, body: dict[str, Any] | None = None, **extra: Any) -> Any:
+        """POST /observations. Prefer body dict (TS-compatible); content= kwargs also OK."""
+        payload: dict[str, Any] = dict(body or {})
+        payload.update(extra)
+        payload.setdefault("producer", self.component_id)
+        if "content" in payload and "source_kind" not in payload:
+            payload["source_kind"] = "dialog"
+        m, p = self.PATHS["observe"]
+        return self.request(m, p, payload)
 
-    def retrieve(self, query: str, **extra: Any) -> Any:
-        return self.request("POST", "/api/v1/retrieve", {"query": query, **extra})
+    def retrieve(self, body: dict[str, Any] | None = None, **extra: Any) -> Any:
+        payload = dict(body or {})
+        payload.update(extra)
+        m, p = self.PATHS["retrieve"]
+        return self.request(m, p, payload)
 
-    def search(self, query: str, limit: int = 10) -> Any:
-        return self.request("POST", "/api/v1/memories/search", {"query": query, "limit": limit})
+    def search(self, body: dict[str, Any] | None = None, **extra: Any) -> Any:
+        payload = dict(body or {})
+        payload.update(extra)
+        m, p = self.PATHS["search"]
+        return self.request(m, p, payload)

@@ -2,7 +2,7 @@
 
 > 基线：`feat/mnemosyne-2.0-p0-p1` · PR [#13](https://github.com/DSH-Raising-Plan/dsh-mnemosyne/pull/13) · `9295d03`  
 > 状态标注约定：`Implemented` / `Partial` / `Planned`（见各文档页眉）。  
-> **当前执行重点：阶段 2 · P1 Cognitive Correctness**（分支 `feat/mnemosyne-2.0-p1-cognitive-correctness`；P0 见 PR #14）。
+> **当前执行重点：阶段 3 · P2 Integration**（分支 `feat/mnemosyne-2.0-p2-integration`；P1 见 PR #15）。
 
 ## 一、结论
 

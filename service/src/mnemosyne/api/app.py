@@ -42,14 +42,18 @@ def create_app(
     *,
     access_token: str,
     api_prefix: str = "/api/v1",
+    require_component: bool = False,
 ) -> FastAPI:
-    app = FastAPI(title="Mnemosyne", version="0.2.0")
+    app = FastAPI(title="Mnemosyne", version="0.3.2")
     app.state.service = service
     app.state.access_token = access_token
+    app.state.require_component = require_component
 
     def require_token(
+        request: Request,
         authorization: str | None = Header(default=None),
         x_memory_token: str | None = Header(default=None),
+        x_component_id: str | None = Header(default=None),
     ) -> None:
         token = None
         if authorization and authorization.lower().startswith("bearer "):
@@ -59,6 +63,26 @@ def create_app(
         expected = app.state.access_token
         if not expected or not token or not secrets.compare_digest(token, expected):
             raise HTTPException(status_code=401, detail={"code": "unauthorized", "message": "invalid token"})
+        from mnemosyne.governance.component_auth import check_component_access
+
+        access = check_component_access(
+            service.db,
+            component_id=(x_component_id or "").strip() or None,
+            method=request.method,
+            path=request.url.path,
+            require_component=bool(app.state.require_component),
+        )
+        if not access.get("allowed"):
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "code": "forbidden",
+                    "message": access.get("detail") or "insufficient_scope",
+                    "needed": access.get("needed") or [],
+                    "have": access.get("have") or [],
+                },
+            )
+        request.state.component_id = (x_component_id or "").strip() or None
 
     @app.middleware("http")
     async def add_request_id(request: Request, call_next: Callable):
@@ -441,5 +465,41 @@ def create_app(
         from mnemosyne.governance.value_system import run_advanced_value_evaluation
 
         return run_advanced_value_evaluation(service.db, {})
+
+    @app.get(f"{pref}/components")
+    def components_list(_: None = Depends(require_token)) -> dict[str, Any]:
+        from mnemosyne.governance.component_auth import DEFAULT_COMPONENTS, get_component
+
+        # 列出已注册（含默认）
+        rows = service.db.connect().execute(
+            "SELECT component_id FROM components ORDER BY component_id"
+        ).fetchall()
+        items = []
+        for r in rows:
+            c = get_component(service.db, r["component_id"])
+            if c:
+                items.append(c)
+        if not items:
+            items = [
+                {"component_id": k, **v} for k, v in DEFAULT_COMPONENTS.items()
+            ]
+        return {"ok": True, "items": items, "count": len(items)}
+
+    @app.post(f"{pref}/components/register")
+    def components_register(body: dict[str, Any], _: None = Depends(require_token)) -> dict[str, Any]:
+        from mnemosyne.governance.component_auth import register_component
+
+        cid = str(body.get("component_id") or "").strip()
+        name = str(body.get("name") or cid).strip()
+        scopes = list(body.get("scopes") or [])
+        if not cid:
+            raise HTTPException(
+                status_code=400,
+                detail={"code": "bad_request", "message": "component_id required"},
+            )
+        # 注册不等于自动获得全部权限：未给出 scopes 时默认空（拒绝写）
+        return {"ok": True, "component": register_component(
+            service.db, component_id=cid, name=name, scopes=scopes
+        )}
 
     return app

@@ -65,8 +65,10 @@ def build_context(
     bus = EventBus()
     service = MemoryService(db, bus)
     from mnemosyne.governance.capability_gate import ensure_default_capabilities
+    from mnemosyne.governance.component_auth import ensure_default_components
 
     ensure_default_capabilities(db)
+    ensure_default_components(db)
     runtime = BackgroundRuntime(db, bus, service)
     access_token = token or _resolve_token()
     app = create_app(service, access_token=access_token)

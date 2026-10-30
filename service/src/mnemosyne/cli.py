@@ -165,6 +165,98 @@ def cmd_migrate_amem(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_status(args: argparse.Namespace) -> int:
+    from mnemosyne.storage.backup import integrity_check
+    from mnemosyne.storage.migrate_safe import preflight
+    from mnemosyne.storage.paths import ensure_layout
+
+    paths = ensure_layout(Path(args.data_dir).resolve() if args.data_dir else None)
+    lock = paths["service_lock"]
+    service_json = paths["service_json"]
+    report = {
+        "ok": True,
+        "data_dir": str(paths["root"]),
+        "db_exists": paths["db"].is_file(),
+        "lock_exists": lock.is_file(),
+        "service_json_exists": service_json.is_file(),
+        "preflight": preflight(paths["db"]),
+        "integrity": integrity_check(paths["db"]) if paths["db"].is_file() else None,
+    }
+    if service_json.is_file():
+        try:
+            report["service"] = json.loads(service_json.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            report["service"] = None
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_plan_install(args: argparse.Namespace) -> int:
+    """只生成安装计划，不执行（供 AI / 人审阅）。"""
+    target = args.target or "dsh"
+    plan = {
+        "ok": True,
+        "dry_run": True,
+        "target": target,
+        "steps": [
+            {"id": "discover", "action": "check python>=3.11, node, data_dir"},
+            {"id": "backup", "action": "mnemosyne backup --label pre-install"},
+            {"id": "install_service", "action": "pip install -e ./service"},
+            {"id": "configure", "action": "set DSH_MNEMOSYNE_DATA_DIR / token; register component dsh.host"},
+            {"id": "verify", "action": "mnemosyne verify --target " + target},
+        ],
+        "permissions_requested": [
+            "write data_dir",
+            "bind 127.0.0.1",
+            "read/write memory.db",
+        ],
+        "will_not": [
+            "overwrite without backup",
+            "exfiltrate memories",
+            "enable remote bind by default",
+            "grant components full scopes on register",
+        ],
+    }
+    print(json.dumps(plan, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_verify(args: argparse.Namespace) -> int:
+    from mnemosyne.bootstrap import build_context
+    from mnemosyne.domain.models import ObservationIn, SourceKind
+    from mnemosyne.mcp.tools import TOOL_NAMES, tool_specs
+
+    ctx = build_context(
+        data_dir=args.data_dir or None,
+        token=args.token or "cli-verify",
+        acquire_lock=False,
+        auto_backup_on_migrate=False,
+    )
+    health = ctx.service.health()
+    obs = ctx.service.capture_observation(
+        ObservationIn(
+            source_kind=SourceKind.SYSTEM,
+            content="verify ping",
+            producer="cli.verify",
+            idempotency_key="cli-verify-ping",
+        )
+    )
+    tools = [t["name"] for t in tool_specs()]
+    missing = [n for n in TOOL_NAMES if n not in tools]
+    report = {
+        "ok": bool(health.get("ok")) and not missing and bool(obs.id),
+        "target": args.target or "dsh",
+        "health": health,
+        "observation_id": obs.id,
+        "mcp_tools": tools,
+        "mcp_tools_missing": missing,
+        "data_dir": str(ctx.paths["root"]),
+    }
+    ctx.db.close()
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0 if report["ok"] else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="mnemosyne")
     parser.add_argument("--data-dir", default="")
@@ -183,6 +275,17 @@ def main(argv: list[str] | None = None) -> int:
 
     p_doc = sub.add_parser("doctor", help="预检 / 完整性 / 迁移状态（JSON）")
     p_doc.set_defaults(func=cmd_doctor)
+
+    p_st = sub.add_parser("status", help="实例状态 JSON")
+    p_st.set_defaults(func=cmd_status)
+
+    p_plan = sub.add_parser("plan-install", help="生成安装计划（dry-run）")
+    p_plan.add_argument("--target", default="dsh")
+    p_plan.set_defaults(func=cmd_plan_install)
+
+    p_ver = sub.add_parser("verify", help="安装后健康与工具清单校验")
+    p_ver.add_argument("--target", default="dsh")
+    p_ver.set_defaults(func=cmd_verify)
 
     p_h = sub.add_parser("health", help="本地打开库并打印 health")
     p_h.set_defaults(func=cmd_health)

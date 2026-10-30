@@ -2,7 +2,8 @@
 
 > 基线：`feat/mnemosyne-2.0-p0-p1` · PR [#13](https://github.com/DSH-Raising-Plan/dsh-mnemosyne/pull/13) · `9295d03`  
 > 状态标注约定：`Implemented` / `Partial` / `Planned`（见各文档页眉）。  
-> **当前执行重点：阶段 3 · P2 Integration**（分支 `feat/mnemosyne-2.0-p2-integration`；P1 见 PR #15）。
+> **路线已冻结：** [#17](https://github.com/DSH-Raising-Plan/dsh-mnemosyne/pull/17) Accepted → [#18](https://github.com/DSH-Raising-Plan/dsh-mnemosyne/pull/18) Merged → **P3 Foundation 1.0 Stabilized** → **Hardening Deferred；维护期 Current**。  
+> 不自动开 P3.2。约束：[`ENGINEERING_CONSTRAINTS.md`](./ENGINEERING_CONSTRAINTS.md)；路线：[`ROADMAP_FROZEN.md`](./ROADMAP_FROZEN.md)。
 
 ## 一、结论
 
@@ -101,7 +102,47 @@ flowchart TB
 
 ## 七、阶段 4 — Universal Ecosystem
 
-Component Contract、UDM、PCIP（提案非行业标准）、Federation。跨用户默认禁止；外来内容先当 Observation。
+分支：`feat/mnemosyne-2.0-p3-ecosystem`（叠在 P2 之上）
+
+| ID | 项 | 状态 | 说明 |
+| --- | --- | --- | --- |
+| P3-01 | Component Contract schema | Implemented | `schemas/component-contract/v1.json` + 注册校验 |
+| P3-02 | UDM envelope | Implemented | `schemas/universal-data-model/v1.json` + 映射/校验 API |
+| P3-03 | Events schema | Implemented | `schemas/events/v1.json` |
+| P3-04 | PCIP proposal | Partial | 文档 + L0–L2 stub；**L3 默认拒绝**；入站仅 Observation |
+| P3-05 | Discovery API | Implemented | `GET /api/v1/discovery` |
+| P3-06 | Thin SDKs | Implemented | `packages/mnemosyne-sdk` / `mnemosyne-sdk-ts` |
+| P3-07 | P2P / Relay | Planned | 非本阶段交付 |
+
+外部内容永不自动升为 Active Memory；InterestSignal 晋升与完整联邦仍为 Planned。
+
+### Foundation 验收（#17）
+
+结论：**Foundation Accepted** — 剩余 Partial/Planned **不阻塞** 本阶段合并，但列为后续生产化/联邦门槛。  
+详见 [`P3_FOUNDATION_ACCEPTANCE.md`](./P3_FOUNDATION_ACCEPTANCE.md)。
+
+| 能力 | 状态 |
+| --- | --- |
+| Universal Data Model 基础 Schema | Foundation Verified |
+| Component Contract 基础校验 | Foundation Verified |
+| 外部 REST 注册与 Discovery | Foundation Verified |
+| PCIP L1/L3 基础安全边界 | Foundation Verified |
+| L3 默认拒绝、Observation 隔离 | Foundation Verified |
+| 完整 Schema 语义校验 | Partial（生产化门槛） |
+| 生产级组件身份与授权 | Partial（生产化门槛） |
+| 数据使用策略深层执法 | Planned（生产化门槛） |
+| P2P / Relay Federation | Planned（联邦门槛） |
+
+里程碑：已有不依赖 Mnemosyne 内部实现的外部组件，真实走通注册 → 发现 → 授权 → 交换 → 安全拒绝。
+
+### P3.1 Foundation Stabilization
+
+独立小阶段：冻结验收范围、可重复验证、发布基线。  
+计划：[`P3.1_FOUNDATION_STABILIZATION.md`](./P3.1_FOUNDATION_STABILIZATION.md)  
+基线 ID：`foundation-0.1.0`（`schemas/VERSIONS.json`）  
+**不新增生态能力**；Partial/Planned 生产安全决策放在稳定基线发布之后。
+
+**发布：** `P3 Foundation 1.0 — Stabilized`（#18）。 路线：`#17 Accepted → #18 Stabilization → Foundation 1.0 → Production Security Assessment`。 不自动进入 P3.2。
 
 ## 八、版本与执行顺序
 

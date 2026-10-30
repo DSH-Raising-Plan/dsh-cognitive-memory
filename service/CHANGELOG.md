@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.3.5 — P3.1 Foundation Stabilization
+
+- **Release seal:** P3 Foundation 1.0 — Stabilized (#18 CI green)
+- Next: Production Security Assessment (not auto P3.2); keep REST contracts backward-compatible
+- Docs: `ENGINEERING_CONSTRAINTS.md`, `ROADMAP_FROZEN.md`, `PRODUCTION_SECURITY_ASSESSMENT.md`
+
+- Freeze acceptance on `docs/P3_FOUNDATION_ACCEPTANCE.md`; baseline `foundation-0.1.0`
+- Independent Schema/API/PCIP versions (`schemas/VERSIONS.json`); Discovery exposes baseline
+- Validator subset frozen (`docs/VALIDATOR_SUBSET.md`); compat + SDK path parity tests
+- CI job `foundation-stabilization` runs unit suite + external 12-probe + stability report
+- Clean-env reproduce guide; known limits + compatibility matrix
+
+## 0.3.4 — P3 Universal Ecosystem (foundation)
+
+- Schemas: Component Contract / UDM / Events / PCIP exchange (`schemas/`)
+- Docs: `PCIP.md`, `COMPONENT_CONTRACT.md`, `INTEROPERABILITY.md`
+- Interop validators + UDM mapping; Discovery API `/api/v1/discovery`
+- PCIP stub: L3 default deny; inbound → Observation only
+- Thin SDKs: `packages/mnemosyne-sdk` (Python), `packages/mnemosyne-sdk-ts` (TS)
+- Foundation acceptance status: docs/P3_FOUNDATION_ACCEPTANCE.md (Foundation Verified; Partial/Planned = production gates)
+- Security boundary hardening (post-review): route scopes for discovery/PCIP;
+  reject expired policy / `to_node` mismatch; inbound trust=`untrusted`;
+  clamp self-register scopes; bootstrap register; external adapter probe
+  (`examples/external-weather-adapter`, `scripts/run_external_interop_probe.py`)
+
 ## 0.3.3 — P2 Integration & Production
 
 - MCP 工具对齐 Host：`memory_retrieve` / `memory_observe` / `memory_health`；官方 SDK 优先、JSON-RPC 回退

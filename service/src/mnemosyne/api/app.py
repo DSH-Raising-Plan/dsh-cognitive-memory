@@ -44,7 +44,7 @@ def create_app(
     api_prefix: str = "/api/v1",
     require_component: bool = False,
 ) -> FastAPI:
-    app = FastAPI(title="Mnemosyne", version="0.3.2")
+    app = FastAPI(title="Mnemosyne", version="0.3.4")
     app.state.service = service
     app.state.access_token = access_token
     app.state.require_component = require_component
@@ -488,18 +488,113 @@ def create_app(
     @app.post(f"{pref}/components/register")
     def components_register(body: dict[str, Any], _: None = Depends(require_token)) -> dict[str, Any]:
         from mnemosyne.governance.component_auth import register_component
+        from mnemosyne.interop.schemas import validate_component_contract
 
         cid = str(body.get("component_id") or "").strip()
         name = str(body.get("name") or cid).strip()
-        scopes = list(body.get("scopes") or [])
+        from mnemosyne.governance.component_auth import ALL_SCOPES
+
+        raw_scopes = list(body.get("scopes") or body.get("capabilities") or [])
+        claimed = set(body.get("capabilities") or [])
+        allowed = set(ALL_SCOPES)
+        # 自助注册：仅允许 ALL_SCOPES ∩ capabilities（若声明）∩ 请求；禁止 *
+        scopes = []
+        for s in raw_scopes:
+            if s == "*" or s not in allowed:
+                continue
+            if claimed and s not in claimed:
+                continue
+            scopes.append(s)
         if not cid:
             raise HTTPException(
                 status_code=400,
                 detail={"code": "bad_request", "message": "component_id required"},
             )
-        # 注册不等于自动获得全部权限：未给出 scopes 时默认空（拒绝写）
+        # 若携带完整契约，先校验（scopes 为注册字段，不属于 Contract schema）
+        if body.get("version") and body.get("type") and body.get("interfaces") is not None:
+            contract_doc = {k: v for k, v in body.items() if k != "scopes"}
+            check = validate_component_contract(contract_doc)
+            if not check["ok"]:
+                raise HTTPException(
+                    status_code=400,
+                    detail={"code": "invalid_contract", "errors": check["errors"]},
+                )
         return {"ok": True, "component": register_component(
             service.db, component_id=cid, name=name, scopes=scopes
         )}
+
+    @app.get(f"{pref}/discovery")
+    def discovery(_: None = Depends(require_token)) -> dict[str, Any]:
+        from mnemosyne.interop.schemas import schema_root
+        from mnemosyne.interop.versions import discovery_versions_payload
+        from mnemosyne.mcp.tools import TOOL_NAMES
+
+        root = schema_root()
+        schema_files = sorted(
+            str(p.relative_to(root)).replace("\\", "/")
+            for p in root.rglob("*.json")
+            if p.name != "VERSIONS.json"
+        )
+        versions = discovery_versions_payload()
+        pcip_meta = dict(versions.get("pcip") or {})
+        return {
+            "ok": True,
+            "mnemosyne_api": versions.get("mnemosyne_api") or "v1",
+            "baseline": versions.get("baseline"),
+            "versions": versions,
+            "protocols": ["rest", "mcp", "cli", "stdio"],
+            "mcp_tools": TOOL_NAMES,
+            "schemas": schema_files,
+            "pcip": {
+                "status": "proposal",
+                "version": pcip_meta.get("pcip_version", "0.1-proposal"),
+                "l3_default": pcip_meta.get("l3_default", "forbidden"),
+                "inbound_landing": pcip_meta.get("inbound_landing", "observation_only"),
+                "inbound_trust_default": pcip_meta.get(
+                    "inbound_trust_default", "untrusted"
+                ),
+            },
+            "federation": {"status": "stub", "transport": "local_api_only"},
+        }
+
+    @app.post(f"{pref}/pcip/exchange/request")
+    def pcip_request(body: dict[str, Any], _: None = Depends(require_token)) -> dict[str, Any]:
+        from mnemosyne.federation.pcip import create_exchange_request
+
+        out = create_exchange_request(service.db, body)
+        if not out.get("ok"):
+            code = 403 if out.get("detail") == "l3_forbidden_by_default" else 400
+            raise HTTPException(status_code=code, detail=out)
+        return out
+
+    @app.post(f"{pref}/pcip/exchange/accept")
+    def pcip_accept(body: dict[str, Any], _: None = Depends(require_token)) -> dict[str, Any]:
+        from mnemosyne.federation.pcip import accept_inbound_exchange
+
+        out = accept_inbound_exchange(service, body)
+        if not out.get("ok"):
+            detail = out.get("detail")
+            code = 403 if detail in ("l3_forbidden_by_default", "to_node_mismatch", "revoked") else 400
+            raise HTTPException(status_code=code, detail=out)
+        return out
+
+    @app.post(f"{pref}/udm/validate")
+    def udm_validate(body: dict[str, Any], _: None = Depends(require_token)) -> dict[str, Any]:
+        from mnemosyne.interop.schemas import (
+            validate_component_contract,
+            validate_event,
+            validate_pcip_exchange,
+            validate_udm,
+        )
+
+        kind = str(body.get("schema_kind") or "udm")
+        doc = body.get("document") if "document" in body else body
+        if kind == "component":
+            return validate_component_contract(doc)
+        if kind == "pcip":
+            return validate_pcip_exchange(doc)
+        if kind == "event":
+            return validate_event(doc)
+        return validate_udm(doc)
 
     return app

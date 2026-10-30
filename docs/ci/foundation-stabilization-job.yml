@@ -1,0 +1,19 @@
+# Proposed addition to .github/workflows/ci.yml (requires workflow scope to merge via OAuth).
+# Until applied remotely, run locally / in any Python CI: scripts/ci_foundation.sh
+#
+# foundation:
+#   name: foundation-stabilization
+#   runs-on: ubuntu-latest
+#   steps:
+#     - uses: actions/checkout@v4
+#     - uses: actions/setup-python@v5
+#       with: { python-version: '3.12' }
+#     - run: pip install -e ./service && pip install httpx uvicorn fastapi pydantic
+#     - run: PYTHONPATH=service/src python -m unittest discover -s service/tests/unit -v
+#     - run: python scripts/run_external_interop_probe.py
+#     - run: python scripts/generate_foundation_stability_report.py --skip-tests --unit-ok --probe-ok
+#     - uses: actions/upload-artifact@v4
+#       if: always()
+#       with:
+#         name: foundation-stability-report
+#         path: docs/reports/FOUNDATION_STABILITY_LATEST.md

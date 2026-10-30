@@ -22,4 +22,31 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -e . && pip install pytest && PYTHONPATH=src pytest -q
+      - run: pip install -e . && pip install pytest httpx && PYTHONPATH=src pytest -q
+  foundation:
+    name: foundation-stabilization
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ./service && pip install httpx uvicorn fastapi pydantic
+      - name: Unit tests
+        env:
+          PYTHONPATH: service/src
+        run: python -m unittest discover -s service/tests/unit -v
+      - name: External REST probe
+        run: python scripts/run_external_interop_probe.py
+      - name: Stability report
+        if: success()
+        run: python scripts/generate_foundation_stability_report.py --skip-tests --unit-ok --probe-ok
+      - name: Stability report (fail)
+        if: failure()
+        run: python scripts/generate_foundation_stability_report.py --skip-tests
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: foundation-stability-report
+          path: docs/reports/FOUNDATION_STABILITY_LATEST.md
+          if-no-files-found: warn

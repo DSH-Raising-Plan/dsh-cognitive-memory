@@ -1,0 +1,80 @@
+{
+  "baseline": "foundation-0.1.0",
+  "schemas": {
+    "component-contract": {
+      "version": "1.0",
+      "path": "component-contract/v1.json"
+    },
+    "universal-data-model": {
+      "version": "1.0",
+      "path": "universal-data-model/v1.json"
+    },
+    "events": {
+      "version": "1.0",
+      "path": "events/v1.json"
+    },
+    "pcip-exchange": {
+      "version": "0.1-proposal",
+      "path": "pcip/exchange-v1.json"
+    }
+  },
+  "api": {
+    "mnemosyne_api": "v1",
+    "rest_prefix": "/api/v1"
+  },
+  "pcip": {
+    "pcip_version": "0.1-proposal",
+    "l3_default": "forbidden",
+    "inbound_landing": "observation_only",
+    "inbound_trust_default": "untrusted"
+  },
+  "sdks": {
+    "mnemosyne-sdk": {
+      "language": "python",
+      "version": "0.1.0"
+    },
+    "mnemosyne-sdk-ts": {
+      "language": "typescript",
+      "version": "0.1.0"
+    }
+  },
+  "compatibility": {
+    "matrix_note": "See docs/FOUNDATION_COMPATIBILITY_MATRIX.md",
+    "supported": [
+      {
+        "service": ">=0.3.4",
+        "schema_baseline": "foundation-0.1.0",
+        "sdk_python": "0.1.x",
+        "sdk_ts": "0.1.x",
+        "external_probe": "examples/external-weather-adapter@foundation"
+      }
+    ]
+  },
+  "frozen_acceptance": "docs/P3_FOUNDATION_ACCEPTANCE.md",
+  "release": "1.0",
+  "status": "Stabilized",
+  "label": "P3 Foundation 1.0 — Stabilized",
+  "stabilized_by": "PR #18",
+  "next": "Dual-track: Track A Foundation maintenance; Track B Migration & Adoption design ACCEPTED (impl Deferred — no 2.1 yet). Hardening Deferred; P3.2 Not Started.",
+  "compatibility_policy": "After Foundation 1.0 Stabilized, keep verified external REST contracts backward-compatible; production hardening may add capability or tighten remote policy but must not casually break Foundation Verified surfaces; breaking changes require explicit versioning, compat policy, and migration. Track B must not mutate foundation-0.1.0 contracts.",
+  "engineering_constraints": "docs/ENGINEERING_CONSTRAINTS.md",
+  "frozen_roadmap": "docs/ROADMAP_FROZEN.md",
+  "migration_parallel_plan": "docs/plans/MEMORY_MIGRATION_PARALLEL_PLAN.md",
+  "phase": {
+    "foundation": "Stabilized",
+    "production_security_assessment": "Completed",
+    "production_hardening": "Deferred",
+    "p3_2": "Not Started",
+    "track_a_foundation_maintenance": "Current",
+    "track_b_migration_adoption_design": "Accepted"
+  },
+  "design_tracks": {
+    "memory-interchange": {
+      "version": "0.1",
+      "path": "memory-interchange/v0.1.json",
+      "status": "design-frozen",
+      "note": "Not part of foundation-0.1.0; separate from UDM and Component Contract"
+    }
+  },
+  "security_principles": "docs/ENGINEERING_CONSTRAINTS.md#三条安全原则持续约束后续实现"
+}

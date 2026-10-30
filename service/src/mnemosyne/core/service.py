@@ -652,9 +652,437 @@ class MemoryService:
         return {
             "ok": True,
             "service": "mnemosyne",
-            "version": "0.1.0",
+            "version": "0.2.0",
             "memories": mem_n,
             "observations": obs_n,
             "outbox_pending": pending,
+            "schemas": self.count_cognitive_schemas(),
+            "mnemosyne_version": "2.0",
             "time": _now(),
         }
+
+    _RELATION_TYPES = frozenset(
+        {"supports", "contradicts", "derives", "supersedes", "before", "after", "continues"}
+    )
+
+    def link_memories(
+        self,
+        *,
+        from_id: str,
+        to_id: str,
+        relation: str,
+        note: str = "",
+        confidence: float | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        rel = (relation or "").strip().lower()
+        if rel not in self._RELATION_TYPES:
+            raise ConflictError(f"unsupported relation: {relation}", code="bad_relation")
+        if not from_id or not to_id or from_id == to_id:
+            raise ConflictError("invalid from_id/to_id", code="bad_ids")
+        now = _now()
+        with self.db.transaction() as conn:
+            conn.execute(
+                """
+                INSERT INTO memory_relations(from_id, to_id, relation, note, created_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (from_id, to_id, rel, note or "", now),
+            )
+            rid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+        return {
+            "ok": True,
+            "id": rid,
+            "from_id": from_id,
+            "to_id": to_id,
+            "relation": rel,
+            "note": note or "",
+            "confidence": confidence,
+            "metadata": metadata or {},
+            "created_at": now,
+        }
+
+    def list_relations(self, memory_id: str, *, limit: int = 40) -> list[dict[str, Any]]:
+        lim = max(1, min(200, int(limit or 40)))
+        rows = self.db.connect().execute(
+            """
+            SELECT id, from_id, to_id, relation, note, created_at
+            FROM memory_relations
+            WHERE from_id=? OR to_id=?
+            ORDER BY id DESC LIMIT ?
+            """,
+            (memory_id, memory_id, lim),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def store_change_plan(self, plan: dict[str, Any]) -> str:
+        now = _now()
+        pid = str(plan.get("change_id") or new_id("cpl"))
+        with self.db.transaction() as conn:
+            conn.execute(
+                """
+                INSERT INTO change_plans(
+                  id, observation_id, change_type, risk_level, confidence,
+                  approval_requirement, execution_status, verification_status,
+                  payload_json, rollback_reference, created_at, updated_at, applied_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    pid,
+                    plan.get("observation_id"),
+                    str(plan.get("change_type") or "NO_CHANGE"),
+                    str(plan.get("risk_level") or "medium"),
+                    float(plan.get("confidence") or 0),
+                    str(plan.get("approval_requirement") or "human"),
+                    str(plan.get("execution_status") or "proposed"),
+                    str(plan.get("verification_status") or "pending"),
+                    json.dumps(plan, ensure_ascii=False),
+                    plan.get("rollback_reference"),
+                    now,
+                    now,
+                    None,
+                ),
+            )
+        return pid
+
+    def get_change_plan(self, plan_id: str) -> dict[str, Any] | None:
+        row = self.db.connect().execute(
+            "SELECT * FROM change_plans WHERE id=?", (plan_id,)
+        ).fetchone()
+        if not row:
+            return None
+        try:
+            payload = json.loads(row["payload_json"] or "{}")
+        except json.JSONDecodeError:
+            payload = {}
+        payload.update(
+            {
+                "change_id": row["id"],
+                "observation_id": row["observation_id"],
+                "change_type": row["change_type"],
+                "risk_level": row["risk_level"],
+                "confidence": row["confidence"],
+                "approval_requirement": row["approval_requirement"],
+                "execution_status": row["execution_status"],
+                "verification_status": row["verification_status"],
+                "rollback_reference": row["rollback_reference"],
+                "created_at": row["created_at"],
+                "updated_at": row["updated_at"],
+                "applied_at": row["applied_at"],
+            }
+        )
+        return payload
+
+    def list_change_plans(
+        self, *, limit: int = 40, execution_status: str | None = None
+    ) -> list[dict[str, Any]]:
+        lim = max(1, min(200, int(limit or 40)))
+        sql = "SELECT id FROM change_plans WHERE 1=1"
+        args: list[Any] = []
+        if execution_status:
+            sql += " AND execution_status=?"
+            args.append(execution_status)
+        sql += " ORDER BY created_at DESC LIMIT ?"
+        args.append(lim)
+        rows = self.db.connect().execute(sql, tuple(args)).fetchall()
+        out = []
+        for r in rows:
+            p = self.get_change_plan(str(r["id"]))
+            if p:
+                out.append(p)
+        return out
+
+    def update_change_plan(
+        self,
+        plan_id: str,
+        *,
+        execution_status: str | None = None,
+        verification_status: str | None = None,
+        rollback_reference: str | None = None,
+        payload_patch: dict[str, Any] | None = None,
+    ) -> dict[str, Any] | None:
+        cur = self.get_change_plan(plan_id)
+        if not cur:
+            return None
+        if payload_patch:
+            cur.update(payload_patch)
+        now = _now()
+        exec_s = execution_status or cur.get("execution_status")
+        ver_s = verification_status or cur.get("verification_status")
+        rb = rollback_reference if rollback_reference is not None else cur.get("rollback_reference")
+        applied_at = now if exec_s == "applied" else cur.get("applied_at")
+        with self.db.transaction() as conn:
+            conn.execute(
+                """
+                UPDATE change_plans SET
+                  execution_status=?, verification_status=?, rollback_reference=?,
+                  payload_json=?, updated_at=?, applied_at=?
+                WHERE id=?
+                """,
+                (exec_s, ver_s, rb, json.dumps(cur, ensure_ascii=False), now, applied_at, plan_id),
+            )
+        return self.get_change_plan(plan_id)
+
+    def store_cognitive_schema(self, schema: dict[str, Any]) -> str:
+        now = _now()
+        sid = str(schema.get("id") or new_id("sch"))
+        name = str(schema.get("name") or "未命名图式").strip() or "未命名图式"
+        description = str(schema.get("description") or "")
+        schema_type = str(schema.get("type") or schema.get("schema_type") or "KNOWLEDGE")
+        state = str(schema.get("state") or "PROPOSED").upper()
+        confidence = float(schema.get("confidence") or 0.4)
+        version = int(schema.get("version") or 1)
+        payload = dict(schema)
+        payload.update(
+            {
+                "id": sid,
+                "type": schema_type,
+                "state": state,
+                "confidence": confidence,
+                "version": version,
+                "created_at": payload.get("created_at") or now,
+                "updated_at": now,
+            }
+        )
+        with self.db.transaction() as conn:
+            conn.execute(
+                """
+                INSERT INTO cognitive_schemas(
+                  id, name, description, schema_type, state, confidence,
+                  version, payload_json, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                  name=excluded.name, description=excluded.description,
+                  schema_type=excluded.schema_type, state=excluded.state,
+                  confidence=excluded.confidence, version=excluded.version,
+                  payload_json=excluded.payload_json, updated_at=excluded.updated_at
+                """,
+                (
+                    sid, name, description, schema_type, state, confidence, version,
+                    json.dumps(payload, ensure_ascii=False),
+                    payload.get("created_at") or now, now,
+                ),
+            )
+            conn.execute(
+                """
+                INSERT INTO schema_versions(
+                  id, schema_id, version, change_type, reason, payload_json, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    new_id("sv"), sid, version,
+                    str(schema.get("change_type") or "CREATE"),
+                    str(schema.get("reason") or "store"),
+                    json.dumps(payload, ensure_ascii=False), now,
+                ),
+            )
+        return sid
+
+    def get_cognitive_schema(self, schema_id: str) -> dict[str, Any] | None:
+        row = self.db.connect().execute(
+            "SELECT * FROM cognitive_schemas WHERE id=?", (schema_id,)
+        ).fetchone()
+        if not row:
+            return None
+        try:
+            payload = json.loads(row["payload_json"] or "{}")
+        except json.JSONDecodeError:
+            payload = {}
+        payload.update(
+            {
+                "id": row["id"],
+                "name": row["name"],
+                "description": row["description"],
+                "type": row["schema_type"],
+                "schema_type": row["schema_type"],
+                "state": row["state"],
+                "confidence": row["confidence"],
+                "version": row["version"],
+                "created_at": row["created_at"],
+                "updated_at": row["updated_at"],
+            }
+        )
+        return payload
+
+    def list_cognitive_schemas(
+        self, *, limit: int = 40, state: str | None = None, schema_type: str | None = None
+    ) -> list[dict[str, Any]]:
+        lim = max(1, min(200, int(limit or 40)))
+        sql = "SELECT id FROM cognitive_schemas WHERE 1=1"
+        args: list[Any] = []
+        if state:
+            sql += " AND state=?"
+            args.append(str(state).upper())
+        if schema_type:
+            sql += " AND schema_type=?"
+            args.append(schema_type)
+        sql += " ORDER BY updated_at DESC LIMIT ?"
+        args.append(lim)
+        rows = self.db.connect().execute(sql, tuple(args)).fetchall()
+        out = []
+        for r in rows:
+            s = self.get_cognitive_schema(str(r["id"]))
+            if s:
+                out.append(s)
+        return out
+
+    def update_cognitive_schema(
+        self,
+        schema_id: str,
+        *,
+        patch: dict[str, Any] | None = None,
+        state: str | None = None,
+        change_type: str = "REFINE",
+        reason: str = "",
+    ) -> dict[str, Any] | None:
+        cur = self.get_cognitive_schema(schema_id)
+        if not cur:
+            return None
+        now = _now()
+        if patch:
+            cur.update(patch)
+        if state:
+            cur["state"] = str(state).upper()
+        cur["version"] = int(cur.get("version") or 1) + 1
+        cur["updated_at"] = now
+        with self.db.transaction() as conn:
+            conn.execute(
+                """
+                UPDATE cognitive_schemas SET
+                  name=?, description=?, schema_type=?, state=?, confidence=?,
+                  version=?, payload_json=?, updated_at=?
+                WHERE id=?
+                """,
+                (
+                    str(cur.get("name") or ""),
+                    str(cur.get("description") or ""),
+                    str(cur.get("type") or cur.get("schema_type") or "KNOWLEDGE"),
+                    str(cur.get("state") or "PROPOSED"),
+                    float(cur.get("confidence") or 0.4),
+                    int(cur["version"]),
+                    json.dumps(cur, ensure_ascii=False),
+                    now,
+                    schema_id,
+                ),
+            )
+            conn.execute(
+                """
+                INSERT INTO schema_versions(
+                  id, schema_id, version, change_type, reason, payload_json, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    new_id("sv"), schema_id, int(cur["version"]), change_type,
+                    reason or change_type, json.dumps(cur, ensure_ascii=False), now,
+                ),
+            )
+        return self.get_cognitive_schema(schema_id)
+
+    def store_cognitive_change_plan(self, plan: dict[str, Any]) -> str:
+        now = _now()
+        pid = str(plan.get("id") or new_id("ccp"))
+        payload = dict(plan)
+        payload["id"] = pid
+        payload.setdefault("created_at", now)
+        payload["updated_at"] = now
+        with self.db.transaction() as conn:
+            conn.execute(
+                """
+                INSERT INTO cognitive_change_plans(
+                  id, operation, risk_level, approval_required, status,
+                  payload_json, created_at, updated_at, applied_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    pid,
+                    str(plan.get("operation") or "UPDATE"),
+                    str(plan.get("riskLevel") or plan.get("risk_level") or "MEDIUM"),
+                    1 if plan.get("approvalRequired", plan.get("approval_required", True)) else 0,
+                    str(plan.get("status") or "PROPOSED"),
+                    json.dumps(payload, ensure_ascii=False),
+                    payload.get("created_at") or now,
+                    now,
+                    None,
+                ),
+            )
+        return pid
+
+    def get_cognitive_change_plan(self, plan_id: str) -> dict[str, Any] | None:
+        row = self.db.connect().execute(
+            "SELECT * FROM cognitive_change_plans WHERE id=?", (plan_id,)
+        ).fetchone()
+        if not row:
+            return None
+        try:
+            payload = json.loads(row["payload_json"] or "{}")
+        except json.JSONDecodeError:
+            payload = {}
+        payload.update(
+            {
+                "id": row["id"],
+                "operation": row["operation"],
+                "risk_level": row["risk_level"],
+                "approval_required": bool(row["approval_required"]),
+                "status": row["status"],
+                "created_at": row["created_at"],
+                "updated_at": row["updated_at"],
+                "applied_at": row["applied_at"],
+            }
+        )
+        return payload
+
+    def list_cognitive_change_plans(
+        self, *, limit: int = 40, status: str | None = None
+    ) -> list[dict[str, Any]]:
+        lim = max(1, min(200, int(limit or 40)))
+        sql = "SELECT id FROM cognitive_change_plans WHERE 1=1"
+        args: list[Any] = []
+        if status:
+            sql += " AND status=?"
+            args.append(str(status).upper())
+        sql += " ORDER BY created_at DESC LIMIT ?"
+        args.append(lim)
+        rows = self.db.connect().execute(sql, tuple(args)).fetchall()
+        out = []
+        for r in rows:
+            p = self.get_cognitive_change_plan(str(r["id"]))
+            if p:
+                out.append(p)
+        return out
+
+    def update_cognitive_change_plan(
+        self,
+        plan_id: str,
+        *,
+        status: str | None = None,
+        payload_patch: dict[str, Any] | None = None,
+    ) -> dict[str, Any] | None:
+        cur = self.get_cognitive_change_plan(plan_id)
+        if not cur:
+            return None
+        now = _now()
+        if payload_patch:
+            cur.update(payload_patch)
+        st = str(status or cur.get("status") or "PROPOSED").upper()
+        cur["status"] = st
+        cur["updated_at"] = now
+        applied_at = now if st == "APPLIED" else cur.get("applied_at")
+        with self.db.transaction() as conn:
+            conn.execute(
+                """
+                UPDATE cognitive_change_plans SET
+                  status=?, payload_json=?, updated_at=?, applied_at=?
+                WHERE id=?
+                """,
+                (st, json.dumps(cur, ensure_ascii=False), now, applied_at, plan_id),
+            )
+        return self.get_cognitive_change_plan(plan_id)
+
+    def count_cognitive_schemas(self) -> int:
+        try:
+            row = self.db.connect().execute(
+                "SELECT COUNT(*) AS n FROM cognitive_schemas"
+            ).fetchone()
+            return int(row["n"] if row else 0)
+        except sqlite3.OperationalError:
+            return 0

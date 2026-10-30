@@ -15,6 +15,7 @@ const TOOLS = [
   'memory_search',
   'memory_get',
   'memory_context',
+  'memory_retrieve',
   'memory_propose',
   'memory_feedback',
   'memory_update',

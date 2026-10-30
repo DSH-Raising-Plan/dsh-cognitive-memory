@@ -53,6 +53,9 @@ def build_context(
     db.ensure_schema()
     bus = EventBus()
     service = MemoryService(db, bus)
+    from mnemosyne.governance.capability_gate import ensure_default_capabilities
+
+    ensure_default_capabilities(db)
     runtime = BackgroundRuntime(db, bus, service)
     access_token = token or _resolve_token()
     app = create_app(service, access_token=access_token)

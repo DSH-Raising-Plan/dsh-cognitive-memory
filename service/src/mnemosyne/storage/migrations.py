@@ -142,6 +142,87 @@ MIGRATIONS: list[tuple[str, str]] = [
         CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status, next_attempt_at);
         """,
     ),
+    (
+        "002_change_plan_schema_gate",
+        """
+        CREATE TABLE IF NOT EXISTS change_plans (
+          id TEXT PRIMARY KEY,
+          observation_id TEXT,
+          change_type TEXT NOT NULL DEFAULT 'NO_CHANGE',
+          risk_level TEXT NOT NULL DEFAULT 'medium',
+          confidence REAL NOT NULL DEFAULT 0,
+          approval_requirement TEXT NOT NULL DEFAULT 'human',
+          execution_status TEXT NOT NULL DEFAULT 'proposed',
+          verification_status TEXT NOT NULL DEFAULT 'pending',
+          payload_json TEXT NOT NULL DEFAULT '{}',
+          rollback_reference TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          applied_at TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_change_plans_status ON change_plans(execution_status, created_at);
+
+        CREATE TABLE IF NOT EXISTS cognitive_schemas (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          description TEXT NOT NULL DEFAULT '',
+          schema_type TEXT NOT NULL DEFAULT 'KNOWLEDGE',
+          state TEXT NOT NULL DEFAULT 'PROPOSED',
+          confidence REAL NOT NULL DEFAULT 0.4,
+          version INTEGER NOT NULL DEFAULT 1,
+          payload_json TEXT NOT NULL DEFAULT '{}',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_cognitive_schemas_state ON cognitive_schemas(state, updated_at);
+
+        CREATE TABLE IF NOT EXISTS schema_versions (
+          id TEXT PRIMARY KEY,
+          schema_id TEXT NOT NULL,
+          version INTEGER NOT NULL,
+          change_type TEXT NOT NULL,
+          reason TEXT NOT NULL DEFAULT '',
+          payload_json TEXT NOT NULL DEFAULT '{}',
+          created_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_schema_versions_sid ON schema_versions(schema_id, version);
+
+        CREATE TABLE IF NOT EXISTS cognitive_change_plans (
+          id TEXT PRIMARY KEY,
+          operation TEXT NOT NULL,
+          risk_level TEXT NOT NULL DEFAULT 'MEDIUM',
+          approval_required INTEGER NOT NULL DEFAULT 1,
+          status TEXT NOT NULL DEFAULT 'PROPOSED',
+          payload_json TEXT NOT NULL DEFAULT '{}',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          applied_at TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_cog_plans_status ON cognitive_change_plans(status, created_at);
+
+        CREATE TABLE IF NOT EXISTS capability_permissions (
+          capability TEXT PRIMARY KEY,
+          enabled INTEGER NOT NULL DEFAULT 0,
+          level TEXT NOT NULL DEFAULT 'LOCKED',
+          requirements_json TEXT NOT NULL DEFAULT '[]',
+          approved_at TEXT,
+          expires_at TEXT,
+          version INTEGER NOT NULL DEFAULT 1,
+          updated_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS capability_audit (
+          id TEXT PRIMARY KEY,
+          capability TEXT NOT NULL,
+          action TEXT NOT NULL,
+          detail_json TEXT NOT NULL DEFAULT '{}',
+          created_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_capability_audit_cap ON capability_audit(capability, created_at);
+
+        CREATE INDEX IF NOT EXISTS idx_observations_correlation ON observations(correlation_id);
+        """,
+    ),
 ]
 
 

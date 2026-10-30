@@ -57,5 +57,6 @@ export class MemoryClient {
   observe(body) { return this.request('POST', '/api/v1/observations', body); }
   feedback(body) { return this.request('POST', '/api/v1/feedback', body); }
   context(body) { return this.request('POST', '/api/v1/contexts/build', body); }
+  retrieve(body) { return this.request('POST', '/api/v1/retrieve', body); }
   task(id) { return this.request('GET', `/api/v1/tasks/${encodeURIComponent(id)}`); }
 }

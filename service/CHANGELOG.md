@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.3 — P2 Integration & Production
+
+- MCP 工具对齐 Host：`memory_retrieve` / `memory_observe` / `memory_health`；官方 SDK 优先、JSON-RPC 回退
+- 组件身份：`X-Component-Id` + scopes（注册≠满权）；默认 `dsh.host` / `mcp.client`
+- CLI：`plan-install` / `verify` / `status`；`skills/mnemosyne-install/SKILL.md`
+- E2E 对话闭环测；MCP Client 兼容测；多 data_dir 隔离测
+- Host `MemoryClient` 默认带 `X-Component-Id: dsh.host`
+
 ## 0.3.2 — P1 Cognitive Correctness
 
 - `ObservationStatus` / `MemoryStatus`（needs_review、archived）分生命周期；时间字段 event_time/valid_*

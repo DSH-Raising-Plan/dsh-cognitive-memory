@@ -75,6 +75,53 @@ class PcipFederationTests(unittest.TestCase):
             self.assertEqual(semantic_active, [])
             db.close()
 
+    def test_expired_and_wrong_node_rejected(self) -> None:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+            db = Database(Path(tmp) / "memory.db", auto_backup_on_migrate=False)
+            db.ensure_schema()
+            svc = MemoryService(db, EventBus())
+            expired = accept_inbound_exchange(
+                svc,
+                {
+                    "pcip_version": "0.1-proposal",
+                    "exchange_id": "pcip_exp",
+                    "level": "L1",
+                    "from_node": "peer-a",
+                    "to_node": "local",
+                    "topic": "x",
+                    "policy": {
+                        "allow_store": True,
+                        "allow_forward": False,
+                        "allow_train": False,
+                        "expires_at": "2000-01-01T00:00:00Z",
+                    },
+                    "payload_ref": {"kind": "observation", "udm_id": "e1", "content_preview": "old"},
+                },
+            )
+            self.assertFalse(expired["ok"])
+            self.assertEqual(expired["detail"], "policy_expired")
+            wrong = accept_inbound_exchange(
+                svc,
+                {
+                    "pcip_version": "0.1-proposal",
+                    "exchange_id": "pcip_wrong",
+                    "level": "L1",
+                    "from_node": "peer-a",
+                    "to_node": "other-node",
+                    "topic": "x",
+                    "policy": {
+                        "allow_store": True,
+                        "allow_forward": False,
+                        "allow_train": False,
+                        "expires_at": "2099-01-01T00:00:00Z",
+                    },
+                    "payload_ref": {"kind": "observation", "udm_id": "e2", "content_preview": "x"},
+                },
+            )
+            self.assertFalse(wrong["ok"])
+            self.assertEqual(wrong["detail"], "to_node_mismatch")
+            db.close()
+
 
 if __name__ == "__main__":
     unittest.main()

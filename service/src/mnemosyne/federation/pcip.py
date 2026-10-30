@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from typing import Any
 
 from mnemosyne.core.service import MemoryService
@@ -16,6 +17,26 @@ from mnemosyne.storage.ids import new_id
 
 def _now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+
+def _policy_expired(policy: dict[str, Any]) -> bool:
+    exp = str(policy.get("expires_at") or "").strip()
+    if not exp:
+        return True
+    try:
+        if exp.endswith("Z"):
+            dt = datetime.fromisoformat(exp.replace("Z", "+00:00"))
+        else:
+            dt = datetime.fromisoformat(exp)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+    except ValueError:
+        try:
+            dt = parsedate_to_datetime(exp)
+        except Exception:
+            return True
+    return dt <= datetime.now(timezone.utc)
 
 
 def ensure_pcip_tables(db: Database) -> None:
@@ -95,9 +116,11 @@ def accept_inbound_exchange(
     policy = dict(request.get("policy") or {})
     if policy.get("revoked"):
         return {"ok": False, "detail": "revoked"}
-    if request.get("to_node") not in (local_node, "*", None) and request.get("to_node") != local_node:
-        # soft check: allow if to_node matches configured local
-        pass
+    if _policy_expired(policy):
+        return {"ok": False, "detail": "policy_expired"}
+    to_node = request.get("to_node")
+    if to_node not in (local_node, "*", None):
+        return {"ok": False, "detail": "to_node_mismatch"}
 
     preview = ((request.get("payload_ref") or {}).get("content_preview") or "").strip()
     topic = str(request.get("topic") or "")
@@ -113,7 +136,7 @@ def accept_inbound_exchange(
                 "level": request.get("level"),
                 "policy": policy,
                 "payload_ref": request.get("payload_ref"),
-                "trust": "authorized_peer",
+                "trust": "untrusted",
             },
             idempotency_key=f"pcip:{request.get('exchange_id')}",
         )

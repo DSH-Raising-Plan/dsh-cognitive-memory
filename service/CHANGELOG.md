@@ -7,6 +7,10 @@
 - Interop validators + UDM mapping; Discovery API `/api/v1/discovery`
 - PCIP stub: L3 default deny; inbound → Observation only
 - Thin SDKs: `packages/mnemosyne-sdk` (Python), `packages/mnemosyne-sdk-ts` (TS)
+- Security boundary hardening (post-review): route scopes for discovery/PCIP;
+  reject expired policy / `to_node` mismatch; inbound trust=`untrusted`;
+  clamp self-register scopes; bootstrap register; external adapter probe
+  (`examples/external-weather-adapter`, `scripts/run_external_interop_probe.py`)
 
 ## 0.3.3 — P2 Integration & Production
 

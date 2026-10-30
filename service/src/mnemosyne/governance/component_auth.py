@@ -74,7 +74,14 @@ ROUTE_SCOPES: list[tuple[str, str, list[str]]] = [
     ("GET", "/api/v1/memories/", ["evidence.read", "memory.read"]),
     ("POST", "/api/v1/relations", ["relationship.create"]),
     ("GET", "/api/v1/health", ["identity.read", "memory.read"]),
+    ("GET", "/api/v1/discovery", ["identity.read"]),
+    ("POST", "/api/v1/udm/validate", ["identity.read"]),
+    ("POST", "/api/v1/components/register", ["identity.read"]),
+    ("GET", "/api/v1/components", ["identity.read"]),
+    ("POST", "/api/v1/pcip/exchange/request", ["exchange.request"]),
+    ("POST", "/api/v1/pcip/exchange/accept", ["exchange.accept"]),
 ]
+
 
 
 def _now() -> str:
@@ -190,6 +197,9 @@ def check_component_access(
 
     comp = get_component(db, component_id)
     if not comp or not comp.get("enabled"):
+        # 允许未知组件走自助注册入口（仍需 Bearer token）
+        if method.upper() == "POST" and path.rstrip("/").endswith("/components/register"):
+            return {"allowed": True, "detail": "bootstrap_register", "needed": needed, "component": None}
         return {"allowed": False, "detail": "component_unknown_or_disabled", "needed": needed}
     if not needed:
         return {"allowed": True, "detail": "no_scope_mapped", "component": comp, "needed": []}

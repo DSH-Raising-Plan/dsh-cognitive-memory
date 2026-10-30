@@ -141,6 +141,8 @@ flowchart TB
 基线 ID：`foundation-0.1.0`（`schemas/VERSIONS.json`）  
 **不新增生态能力**；Partial/Planned 生产安全决策放在稳定基线发布之后。
 
+**发布：** `P3 Foundation 1.0 — Stabilized`（#18）。 路线：`#17 Accepted → #18 Stabilization → Foundation 1.0 → Production Security Assessment`。 不自动进入 P3.2。
+
 ## 八、版本与执行顺序
 
 | 版本 | 目标 |

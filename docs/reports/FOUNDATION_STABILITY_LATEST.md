@@ -1,7 +1,9 @@
 # Foundation Stability Report
 
-Generated: `2026-10-30T05:47:23Z`  
-Baseline: **`foundation-0.1.0`**
+Generated: `2026-10-30T06:00:25Z`  
+Baseline: **`foundation-0.1.0`**  
+Release: **P3 Foundation 1.0 — Stabilized**  
+CI (#18): `plugin` / `service` / `foundation-stabilization` — **PASS**
 
 ## Results
 
@@ -9,6 +11,7 @@ Baseline: **`foundation-0.1.0`**
 | --- | --- |
 | Unit tests | PASS |
 | External interop probe (12) | PASS |
+| CI foundation-stabilization | PASS |
 
 ## Versions
 
@@ -65,7 +68,13 @@ Baseline: **`foundation-0.1.0`**
       }
     ]
   },
-  "frozen_acceptance": "docs/P3_FOUNDATION_ACCEPTANCE.md"
+  "frozen_acceptance": "docs/P3_FOUNDATION_ACCEPTANCE.md",
+  "release": "1.0",
+  "status": "Stabilized",
+  "label": "P3 Foundation 1.0 — Stabilized",
+  "stabilized_by": "PR #18",
+  "next": "Production Security Assessment (not auto P3.2)",
+  "compatibility_policy": "After Foundation 1.0 Stabilized, keep verified external REST contracts backward-compatible; production hardening may add capability or tighten remote policy but must not casually break Foundation Verified surfaces."
 }
 ```
 
@@ -73,8 +82,7 @@ Baseline: **`foundation-0.1.0`**
 
 See [`FOUNDATION_KNOWN_LIMITS.md`](../FOUNDATION_KNOWN_LIMITS.md).
 
-## Notes
+## Next
 
-- Acceptance freeze: [`P3_FOUNDATION_ACCEPTANCE.md`](../P3_FOUNDATION_ACCEPTANCE.md)
-- Stabilization plan: [`P3.1_FOUNDATION_STABILIZATION.md`](../P3.1_FOUNDATION_STABILIZATION.md)
-- Compatibility matrix: [`FOUNDATION_COMPATIBILITY_MATRIX.md`](../FOUNDATION_COMPATIBILITY_MATRIX.md)
+Production Security Assessment — do **not** auto-start P3.2.  
+Keep Foundation Verified REST contracts backward-compatible.

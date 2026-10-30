@@ -1,11 +1,14 @@
 # P3 Universal Ecosystem — Foundation 验收状态
 
-> PR：[#17](https://github.com/DSH-Raising-Plan/dsh-mnemosyne/pull/17)  
-> 分支：`feat/mnemosyne-2.0-p3-ecosystem`  
-> 验收结论：**Foundation Accepted（不阻塞合并）**  
-> **P3.1 冻结：** 本文件为唯一验收基准；稳定化见 [`P3.1_FOUNDATION_STABILIZATION.md`](./P3.1_FOUNDATION_STABILIZATION.md)  
-> 版本基线：`schemas/VERSIONS.json` → **`foundation-0.1.0`**  
-> 证据：外部 REST 组件 `examples/external-weather-adapter`（不 import `mnemosyne`）经 `scripts/run_external_interop_probe.py` **12/12 PASS**
+> **发布标签：P3 Foundation 1.0 — Stabilized**（PR [#18](https://github.com/DSH-Raising-Plan/dsh-mnemosyne/pull/18)）  
+> 前置：[#17](https://github.com/DSH-Raising-Plan/dsh-mnemosyne/pull/17) Foundation Accepted  
+> **唯一验收基准：** 本文件（P3.1 冻结范围不变）  
+> 契约基线 ID：`schemas/VERSIONS.json` → **`foundation-0.1.0`**（release `1.0` / status `Stabilized`）  
+> CI：`plugin` + `service` + `foundation-stabilization` 全绿  
+> 证据：外部 REST 组件 `examples/external-weather-adapter` → `scripts/run_external_interop_probe.py` **12/12 PASS**
+
+> **下一阶段不自动进入 P3.2。** 先做 **Production Security Assessment**，再按真实接入需求排优先级。  
+> 原则：Foundation 稳定后尽量保持向后兼容；生产加固可增加能力/收紧远程策略，但不得随意破坏已验证的外部 REST 契约。
 
 ## 状态约定
 

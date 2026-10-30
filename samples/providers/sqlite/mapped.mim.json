@@ -1,0 +1,58 @@
+{
+  "mim_version": "0.1",
+  "bundle_id": "sample-sqlite-001",
+  "exported_at": "2026-03-30T06:00:00Z",
+  "source": {
+    "provider": "sqlite",
+    "instance": "samples/providers/sqlite/sample.sqlite",
+    "export_tool": "manual-draft"
+  },
+  "items": [
+    {
+      "external_id": "memories:1",
+      "content": "Prefers dark theme in admin UI.",
+      "kind": "fact",
+      "recorded_at": "2026-03-05T10:00:00Z",
+      "provenance": {
+        "provider": "sqlite",
+        "raw_ref": "sample.sqlite:memories:1",
+        "trust_hint": "untrusted"
+      },
+      "payload": {
+        "id": 1,
+        "body": "Prefers dark theme in admin UI.",
+        "created_at": "2026-03-05T10:00:00Z",
+        "kind": "fact"
+      }
+    },
+    {
+      "external_id": "memories:2",
+      "content": "Finished Foundation 1.0 local smoke test.",
+      "kind": "episode",
+      "recorded_at": "2026-03-11T16:20:00Z",
+      "provenance": {
+        "provider": "sqlite",
+        "raw_ref": "sample.sqlite:memories:2",
+        "trust_hint": "untrusted"
+      },
+      "payload": {
+        "id": 2,
+        "body": "Finished Foundation 1.0 local smoke test.",
+        "created_at": "2026-03-11T16:20:00Z",
+        "kind": "episode"
+      }
+    }
+  ],
+  "relations": [
+    {
+      "from_external_id": "memories:2",
+      "to_external_id": "memories:1",
+      "relation": "related_to",
+      "provenance": {
+        "provider": "sqlite",
+        "raw_ref": "sample.sqlite:links:2->1",
+        "trust_hint": "untrusted"
+      }
+    }
+  ]
+}

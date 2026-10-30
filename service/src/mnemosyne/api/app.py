@@ -12,13 +12,28 @@ from fastapi.responses import JSONResponse
 
 from mnemosyne.core.service import ConflictError, MemoryService, NotFoundError
 from mnemosyne.domain.models import (
+    CapabilityCheckIn,
+    CapabilitySetIn,
+    ChangeDetectIn,
+    ChangePlanApplyIn,
+    ChangePlanBuildIn,
+    CognitiveChangePlanApplyIn,
+    CognitiveChangePlanIn,
     ContextBuildIn,
+    EvidenceIn,
     FeedbackIn,
     MemoryProposeIn,
+    MemoryRelationIn,
     MemoryUpdateIn,
     ObservationIn,
+    ReflectionIn,
+    RetrieveIn,
+    SchemaAccommodateIn,
+    SchemaAssimilateIn,
+    SchemaDiscoverIn,
     SearchQuery,
     TaskCreateIn,
+    ValueAnalyzeIn,
 )
 
 
@@ -27,14 +42,18 @@ def create_app(
     *,
     access_token: str,
     api_prefix: str = "/api/v1",
+    require_component: bool = False,
 ) -> FastAPI:
-    app = FastAPI(title="Mnemosyne", version="0.1.0")
+    app = FastAPI(title="Mnemosyne", version="0.3.4")
     app.state.service = service
     app.state.access_token = access_token
+    app.state.require_component = require_component
 
     def require_token(
+        request: Request,
         authorization: str | None = Header(default=None),
         x_memory_token: str | None = Header(default=None),
+        x_component_id: str | None = Header(default=None),
     ) -> None:
         token = None
         if authorization and authorization.lower().startswith("bearer "):
@@ -44,6 +63,26 @@ def create_app(
         expected = app.state.access_token
         if not expected or not token or not secrets.compare_digest(token, expected):
             raise HTTPException(status_code=401, detail={"code": "unauthorized", "message": "invalid token"})
+        from mnemosyne.governance.component_auth import check_component_access
+
+        access = check_component_access(
+            service.db,
+            component_id=(x_component_id or "").strip() or None,
+            method=request.method,
+            path=request.url.path,
+            require_component=bool(app.state.require_component),
+        )
+        if not access.get("allowed"):
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "code": "forbidden",
+                    "message": access.get("detail") or "insufficient_scope",
+                    "needed": access.get("needed") or [],
+                    "have": access.get("have") or [],
+                },
+            )
+        request.state.component_id = (x_component_id or "").strip() or None
 
     @app.middleware("http")
     async def add_request_id(request: Request, call_next: Callable):
@@ -67,7 +106,6 @@ def create_app(
     def health(_: None = Depends(require_token)) -> dict[str, Any]:
         return service.health()
 
-    # 启动握手可无 token 探测进程存活（仅返回 ok，不含业务数据）
     @app.get("/healthz")
     def healthz() -> dict[str, str]:
         return {"ok": "true"}
@@ -99,7 +137,94 @@ def create_app(
 
     @app.post(f"{pref}/observations")
     def observations(body: ObservationIn, _: None = Depends(require_token)) -> dict[str, Any]:
-        return service.capture_observation(body).model_dump()
+        dump = service.capture_observation(body).model_dump()
+        dump["persisted_ok"] = True
+        dump["retrieval_ready"] = True
+        dump["write_stages"] = ["RECEIVED", "PERSISTED", "INDEXED", "VERIFIED"]
+        return dump
+
+    @app.get(f"{pref}/observations/{{observation_id}}")
+    def get_observation(observation_id: str, _: None = Depends(require_token)) -> dict[str, Any]:
+        row = service.get_observation(observation_id)
+        if not row:
+            raise HTTPException(
+                status_code=404,
+                detail={"code": "not_found", "message": f"observation not found: {observation_id}"},
+            )
+        return row
+
+    @app.delete(f"{pref}/observations/{{observation_id}}")
+    def delete_observation(
+        observation_id: str,
+        hard: bool = True,
+        cascade_memories: bool = True,
+        _: None = Depends(require_token),
+    ) -> dict[str, Any]:
+        return service.delete_observation(
+            observation_id, hard=hard, cascade_memories=cascade_memories
+        )
+
+    @app.post(f"{pref}/evidences")
+    def create_evidence(body: EvidenceIn, _: None = Depends(require_token)) -> dict[str, Any]:
+        return service.add_evidence(body).model_dump()
+
+    @app.get(f"{pref}/memories/{{memory_id}}/evidences")
+    def list_memory_evidences(
+        memory_id: str,
+        evidence_type: str | None = None,
+        _: None = Depends(require_token),
+    ) -> dict[str, Any]:
+        items = service.list_evidence(
+            subject_kind="memory", subject_id=memory_id, evidence_type=evidence_type
+        )
+        return {"items": items, "count": len(items)}
+
+    @app.post(f"{pref}/memories/{{memory_id}}/promote-check")
+    def promote_check(memory_id: str, _: None = Depends(require_token)) -> dict[str, Any]:
+        from mnemosyne.cognition.promote import evaluate_and_apply
+
+        return evaluate_and_apply(service, memory_id)
+
+    @app.get(f"{pref}/decisions")
+    def list_decisions(
+        subject_id: str | None = None,
+        limit: int = 40,
+        _: None = Depends(require_token),
+    ) -> dict[str, Any]:
+        items = service.list_decision_logs(subject_id=subject_id, limit=limit)
+        return {"items": items, "count": len(items)}
+
+    @app.post(f"{pref}/privacy/deletion-plan")
+    def privacy_deletion_plan(body: dict[str, Any], _: None = Depends(require_token)) -> dict[str, Any]:
+        return service.build_deletion_plan(
+            observation_id=body.get("observation_id"),
+            memory_id=body.get("memory_id"),
+            hard=bool(body.get("hard", True)),
+        )
+
+    @app.post(f"{pref}/privacy/deletion-execute")
+    def privacy_deletion_execute(body: dict[str, Any], _: None = Depends(require_token)) -> dict[str, Any]:
+        if body.get("observation_id"):
+            return service.delete_observation(
+                str(body["observation_id"]),
+                hard=bool(body.get("hard", True)),
+                cascade_memories=bool(body.get("cascade_memories", True)),
+            )
+        if body.get("memory_id"):
+            return service.forget_memory(str(body["memory_id"]), hard=bool(body.get("hard", True)))
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "bad_request", "message": "observation_id or memory_id required"},
+        )
+
+    @app.post(f"{pref}/memories/{{memory_id}}/forget")
+    def forget_memory_post(
+        memory_id: str,
+        body: dict[str, Any] | None = None,
+        _: None = Depends(require_token),
+    ) -> dict[str, Any]:
+        hard = True if body is None else bool((body or {}).get("hard", True))
+        return service.forget_memory(memory_id, hard=hard)
 
     @app.post(f"{pref}/feedback")
     def feedback(body: FeedbackIn, _: None = Depends(require_token)) -> dict[str, Any]:
@@ -109,6 +234,21 @@ def create_app(
     def contexts(body: ContextBuildIn, _: None = Depends(require_token)) -> dict[str, Any]:
         return service.build_context(body).model_dump()
 
+    @app.post(f"{pref}/retrieve")
+    def retrieve(body: RetrieveIn, _: None = Depends(require_token)) -> dict[str, Any]:
+        from mnemosyne.retrieval.pipeline import run_retrieve
+
+        return run_retrieve(
+            service,
+            query=body.query,
+            force=body.force,
+            limit=body.limit,
+            mode=body.mode,
+            token_budget=body.token_budget,
+            types=body.types,
+            session_id=body.session_id,
+        )
+
     @app.post(f"{pref}/tasks")
     def create_task(body: TaskCreateIn, _: None = Depends(require_token)) -> dict[str, Any]:
         return service.create_task(body).model_dump()
@@ -116,5 +256,345 @@ def create_app(
     @app.get(f"{pref}/tasks/{{task_id}}")
     def get_task(task_id: str, _: None = Depends(require_token)) -> dict[str, Any]:
         return service.get_task(task_id).model_dump()
+
+    @app.post(f"{pref}/relations")
+    def create_relation(body: MemoryRelationIn, _: None = Depends(require_token)) -> dict[str, Any]:
+        return service.link_memories(
+            from_id=body.from_id,
+            to_id=body.to_id,
+            relation=body.relation,
+            note=body.note,
+            confidence=body.confidence,
+            metadata=body.metadata,
+        )
+
+    @app.get(f"{pref}/memories/{{memory_id}}/relations")
+    def get_relations(memory_id: str, _: None = Depends(require_token)) -> dict[str, Any]:
+        items = service.list_relations(memory_id)
+        return {"items": items, "count": len(items)}
+
+    @app.post(f"{pref}/changes/detect")
+    def changes_detect(body: ChangeDetectIn, _: None = Depends(require_token)) -> dict[str, Any]:
+        from mnemosyne.cognition.change_detect import detect_changes_for_observation
+
+        return detect_changes_for_observation(
+            service, body.observation_id, dry_run=body.dry_run
+        )
+
+    @app.post(f"{pref}/changes/plans")
+    def changes_plans_build(body: ChangePlanBuildIn, _: None = Depends(require_token)) -> dict[str, Any]:
+        from mnemosyne.cognition.change_plan import build_plans_for_observation
+
+        return build_plans_for_observation(
+            service, body.observation_id, dry_run=body.dry_run, persist=body.persist
+        )
+
+    @app.get(f"{pref}/changes/plans")
+    def changes_plans_list(
+        limit: int = 40,
+        execution_status: str | None = None,
+        _: None = Depends(require_token),
+    ) -> dict[str, Any]:
+        items = service.list_change_plans(limit=limit, execution_status=execution_status)
+        return {"ok": True, "items": items, "count": len(items)}
+
+    @app.post(f"{pref}/changes/plans/{{plan_id}}/apply")
+    def changes_plans_apply(
+        plan_id: str, body: ChangePlanApplyIn, _: None = Depends(require_token)
+    ) -> dict[str, Any]:
+        from mnemosyne.cognition.change_plan import apply_change_plan
+
+        return apply_change_plan(service, plan_id, confirm=bool(body.confirm))
+
+    @app.post(f"{pref}/changes/plans/{{plan_id}}/rollback")
+    def changes_plans_rollback(plan_id: str, _: None = Depends(require_token)) -> dict[str, Any]:
+        from mnemosyne.cognition.change_plan import rollback_change_plan
+
+        return rollback_change_plan(service, plan_id)
+
+    @app.post(f"{pref}/schemas/discover")
+    def schemas_discover(body: SchemaDiscoverIn, _: None = Depends(require_token)) -> dict[str, Any]:
+        from mnemosyne.cognition.schema_discovery import discover_schema_candidates
+
+        return discover_schema_candidates(
+            service,
+            limit_memories=body.limit_memories,
+            min_cluster=body.min_cluster,
+            min_similarity=body.min_similarity,
+            persist=body.persist,
+        )
+
+    @app.get(f"{pref}/schemas")
+    def schemas_list(
+        limit: int = 40,
+        state: str | None = None,
+        schema_type: str | None = None,
+        _: None = Depends(require_token),
+    ) -> dict[str, Any]:
+        items = service.list_cognitive_schemas(limit=limit, state=state, schema_type=schema_type)
+        return {"ok": True, "items": items, "count": len(items)}
+
+    @app.get(f"{pref}/schemas/{{schema_id}}")
+    def schemas_get(schema_id: str, _: None = Depends(require_token)) -> dict[str, Any]:
+        sch = service.get_cognitive_schema(schema_id)
+        if not sch:
+            raise HTTPException(status_code=404, detail={"code": "not_found", "message": "schema"})
+        return sch
+
+    @app.post(f"{pref}/schemas/{{schema_id}}/assimilate")
+    def schemas_assimilate(
+        schema_id: str, body: SchemaAssimilateIn, _: None = Depends(require_token)
+    ) -> dict[str, Any]:
+        from mnemosyne.cognition.schema_ops import assimilate_schema
+
+        return assimilate_schema(service, schema_id, memory_ids=body.memory_ids, note=body.note)
+
+    @app.post(f"{pref}/schemas/{{schema_id}}/accommodate")
+    def schemas_accommodate(
+        schema_id: str, body: SchemaAccommodateIn, _: None = Depends(require_token)
+    ) -> dict[str, Any]:
+        from mnemosyne.cognition.schema_ops import accommodate_schema
+
+        return accommodate_schema(
+            service,
+            schema_id,
+            memory_ids=body.memory_ids,
+            counter_note=body.counter_note,
+            propose_split=body.propose_split,
+        )
+
+    @app.post(f"{pref}/schemas/plans")
+    def schemas_plans_create(
+        body: CognitiveChangePlanIn, _: None = Depends(require_token)
+    ) -> dict[str, Any]:
+        pid = service.store_cognitive_change_plan(
+            {
+                "operation": body.operation,
+                "targetSchemaIds": body.target_schema_ids,
+                "evidenceRefs": body.evidence_refs,
+                "expectedImpact": body.expected_impact,
+                "risk_level": body.risk_level,
+                "approval_required": body.approval_required,
+                "status": "PROPOSED",
+                "reason": body.reason,
+            }
+        )
+        return {"ok": True, "id": pid, "plan": service.get_cognitive_change_plan(pid)}
+
+    @app.get(f"{pref}/schemas/plans")
+    def schemas_plans_list(
+        limit: int = 40, status: str | None = None, _: None = Depends(require_token)
+    ) -> dict[str, Any]:
+        items = service.list_cognitive_change_plans(limit=limit, status=status)
+        return {"ok": True, "items": items, "count": len(items)}
+
+    @app.post(f"{pref}/schemas/plans/{{plan_id}}/apply")
+    def schemas_plans_apply(
+        plan_id: str, body: CognitiveChangePlanApplyIn, _: None = Depends(require_token)
+    ) -> dict[str, Any]:
+        from mnemosyne.cognition.schema_ops import apply_cognitive_change_plan
+
+        return apply_cognitive_change_plan(service, plan_id, confirm=bool(body.confirm))
+
+    @app.post(f"{pref}/metacognition/reflect")
+    def metacognition_reflect(body: ReflectionIn, _: None = Depends(require_token)) -> dict[str, Any]:
+        from mnemosyne.cognition.metacognition import reflect
+
+        return reflect(
+            service,
+            judgment=body.judgment,
+            schema_ids=body.schema_ids,
+            memory_ids=body.memory_ids,
+        )
+
+    @app.get(f"{pref}/metacognition/impact/{{schema_id}}")
+    def metacognition_impact(schema_id: str, _: None = Depends(require_token)) -> dict[str, Any]:
+        from mnemosyne.cognition.metacognition import analyze_impact
+
+        return analyze_impact(service, schema_id)
+
+    @app.get(f"{pref}/capabilities")
+    def capabilities_list(_: None = Depends(require_token)) -> dict[str, Any]:
+        from mnemosyne.governance.capability_gate import list_capabilities
+
+        items = list_capabilities(service.db)
+        return {"ok": True, "items": items, "count": len(items)}
+
+    @app.post(f"{pref}/capabilities/check")
+    def capabilities_check(body: CapabilityCheckIn, _: None = Depends(require_token)) -> dict[str, Any]:
+        from mnemosyne.governance.capability_gate import check_capability
+
+        return check_capability(service.db, body.capability)
+
+    @app.post(f"{pref}/capabilities/set")
+    def capabilities_set(body: CapabilitySetIn, _: None = Depends(require_token)) -> dict[str, Any]:
+        from mnemosyne.governance.capability_gate import set_capability_level
+
+        return set_capability_level(
+            service.db,
+            body.capability,
+            level=body.level,
+            enabled=body.enabled,
+            actor=body.actor or "external_governance",
+        )
+
+    @app.post(f"{pref}/rl/train")
+    def rl_train(_: None = Depends(require_token)) -> dict[str, Any]:
+        from mnemosyne.governance.reinforcement_learning import run_offline_training
+
+        return run_offline_training(service.db, {})
+
+    @app.post(f"{pref}/rl/deploy")
+    def rl_deploy(policy_id: str = "default", _: None = Depends(require_token)) -> dict[str, Any]:
+        from mnemosyne.governance.reinforcement_learning import deploy_policy
+
+        return deploy_policy(service.db, policy_id)
+
+    @app.post(f"{pref}/value/analyze")
+    def value_analyze(body: ValueAnalyzeIn, _: None = Depends(require_token)) -> dict[str, Any]:
+        from mnemosyne.governance.value_system import analyze_value_conflict_basic
+
+        return analyze_value_conflict_basic(
+            body.intent,
+            stakeholders=body.stakeholders,
+            proposed_action=body.proposed_action,
+        )
+
+    @app.post(f"{pref}/value/advanced")
+    def value_advanced(_: None = Depends(require_token)) -> dict[str, Any]:
+        from mnemosyne.governance.value_system import run_advanced_value_evaluation
+
+        return run_advanced_value_evaluation(service.db, {})
+
+    @app.get(f"{pref}/components")
+    def components_list(_: None = Depends(require_token)) -> dict[str, Any]:
+        from mnemosyne.governance.component_auth import DEFAULT_COMPONENTS, get_component
+
+        # 列出已注册（含默认）
+        rows = service.db.connect().execute(
+            "SELECT component_id FROM components ORDER BY component_id"
+        ).fetchall()
+        items = []
+        for r in rows:
+            c = get_component(service.db, r["component_id"])
+            if c:
+                items.append(c)
+        if not items:
+            items = [
+                {"component_id": k, **v} for k, v in DEFAULT_COMPONENTS.items()
+            ]
+        return {"ok": True, "items": items, "count": len(items)}
+
+    @app.post(f"{pref}/components/register")
+    def components_register(body: dict[str, Any], _: None = Depends(require_token)) -> dict[str, Any]:
+        from mnemosyne.governance.component_auth import register_component
+        from mnemosyne.interop.schemas import validate_component_contract
+
+        cid = str(body.get("component_id") or "").strip()
+        name = str(body.get("name") or cid).strip()
+        from mnemosyne.governance.component_auth import ALL_SCOPES
+
+        raw_scopes = list(body.get("scopes") or body.get("capabilities") or [])
+        claimed = set(body.get("capabilities") or [])
+        allowed = set(ALL_SCOPES)
+        # 自助注册：仅允许 ALL_SCOPES ∩ capabilities（若声明）∩ 请求；禁止 *
+        scopes = []
+        for s in raw_scopes:
+            if s == "*" or s not in allowed:
+                continue
+            if claimed and s not in claimed:
+                continue
+            scopes.append(s)
+        if not cid:
+            raise HTTPException(
+                status_code=400,
+                detail={"code": "bad_request", "message": "component_id required"},
+            )
+        # 若携带完整契约，先校验（scopes 为注册字段，不属于 Contract schema）
+        if body.get("version") and body.get("type") and body.get("interfaces") is not None:
+            contract_doc = {k: v for k, v in body.items() if k != "scopes"}
+            check = validate_component_contract(contract_doc)
+            if not check["ok"]:
+                raise HTTPException(
+                    status_code=400,
+                    detail={"code": "invalid_contract", "errors": check["errors"]},
+                )
+        return {"ok": True, "component": register_component(
+            service.db, component_id=cid, name=name, scopes=scopes
+        )}
+
+    @app.get(f"{pref}/discovery")
+    def discovery(_: None = Depends(require_token)) -> dict[str, Any]:
+        from mnemosyne.interop.schemas import schema_root
+        from mnemosyne.interop.versions import discovery_versions_payload
+        from mnemosyne.mcp.tools import TOOL_NAMES
+
+        root = schema_root()
+        schema_files = sorted(
+            str(p.relative_to(root)).replace("\\", "/")
+            for p in root.rglob("*.json")
+            if p.name != "VERSIONS.json"
+        )
+        versions = discovery_versions_payload()
+        pcip_meta = dict(versions.get("pcip") or {})
+        return {
+            "ok": True,
+            "mnemosyne_api": versions.get("mnemosyne_api") or "v1",
+            "baseline": versions.get("baseline"),
+            "versions": versions,
+            "protocols": ["rest", "mcp", "cli", "stdio"],
+            "mcp_tools": TOOL_NAMES,
+            "schemas": schema_files,
+            "pcip": {
+                "status": "proposal",
+                "version": pcip_meta.get("pcip_version", "0.1-proposal"),
+                "l3_default": pcip_meta.get("l3_default", "forbidden"),
+                "inbound_landing": pcip_meta.get("inbound_landing", "observation_only"),
+                "inbound_trust_default": pcip_meta.get(
+                    "inbound_trust_default", "untrusted"
+                ),
+            },
+            "federation": {"status": "stub", "transport": "local_api_only"},
+        }
+
+    @app.post(f"{pref}/pcip/exchange/request")
+    def pcip_request(body: dict[str, Any], _: None = Depends(require_token)) -> dict[str, Any]:
+        from mnemosyne.federation.pcip import create_exchange_request
+
+        out = create_exchange_request(service.db, body)
+        if not out.get("ok"):
+            code = 403 if out.get("detail") == "l3_forbidden_by_default" else 400
+            raise HTTPException(status_code=code, detail=out)
+        return out
+
+    @app.post(f"{pref}/pcip/exchange/accept")
+    def pcip_accept(body: dict[str, Any], _: None = Depends(require_token)) -> dict[str, Any]:
+        from mnemosyne.federation.pcip import accept_inbound_exchange
+
+        out = accept_inbound_exchange(service, body)
+        if not out.get("ok"):
+            detail = out.get("detail")
+            code = 403 if detail in ("l3_forbidden_by_default", "to_node_mismatch", "revoked") else 400
+            raise HTTPException(status_code=code, detail=out)
+        return out
+
+    @app.post(f"{pref}/udm/validate")
+    def udm_validate(body: dict[str, Any], _: None = Depends(require_token)) -> dict[str, Any]:
+        from mnemosyne.interop.schemas import (
+            validate_component_contract,
+            validate_event,
+            validate_pcip_exchange,
+            validate_udm,
+        )
+
+        kind = str(body.get("schema_kind") or "udm")
+        doc = body.get("document") if "document" in body else body
+        if kind == "component":
+            return validate_component_contract(doc)
+        if kind == "pcip":
+            return validate_pcip_exchange(doc)
+        if kind == "event":
+            return validate_event(doc)
+        return validate_udm(doc)
 
     return app

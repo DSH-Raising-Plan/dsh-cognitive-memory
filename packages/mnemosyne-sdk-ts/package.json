@@ -1,0 +1,11 @@
+{
+  "name": "mnemosyne-sdk",
+  "version": "0.1.0",
+  "description": "Thin TypeScript REST client for Mnemosyne Node",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "license": "AGPL-3.0-or-later"
+}

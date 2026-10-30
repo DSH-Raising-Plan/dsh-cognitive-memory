@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 import threading
@@ -29,12 +30,32 @@ def main(argv: list[str] | None = None) -> int:
 
     from mnemosyne.bootstrap import build_context, write_service_json
 
-    ctx = build_context(
-        data_dir=args.data_dir or None,
-        host=args.host,
-        port=args.port,
-        token=args.token or None,
-    )
+    try:
+        ctx = build_context(
+            data_dir=args.data_dir or None,
+            host=args.host,
+            port=args.port,
+            token=args.token or None,
+            acquire_lock=True,
+        )
+    except Exception as exc:
+        from mnemosyne.storage.process_lock import LockConflictError
+
+        if isinstance(exc, LockConflictError):
+            print(
+                json.dumps(
+                    {
+                        "ok": False,
+                        "code": exc.code,
+                        "message": str(exc),
+                        "holder": exc.holder,
+                    },
+                    ensure_ascii=False,
+                ),
+                flush=True,
+            )
+            return 2
+        raise
     # 把 token 写回环境，方便同进程 MCP / 子工具
     os.environ["DSH_MEMORY_TOKEN"] = ctx.access_token
 
@@ -110,6 +131,8 @@ def main(argv: list[str] | None = None) -> int:
         finally:
             ctx.runtime.stop()
             server.should_exit = True
+            if ctx.process_lock:
+                ctx.process_lock.release()
         return 0
 
     try:
@@ -119,6 +142,8 @@ def main(argv: list[str] | None = None) -> int:
     finally:
         ctx.runtime.stop()
         server.should_exit = True
+        if ctx.process_lock:
+            ctx.process_lock.release()
     return 0
 
 

@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
-"""MCP stdio 工具入口 — 全部委托 MemoryService（无第二套逻辑）。
-
-若未安装 mcp SDK，提供最小 JSON-RPC 风格占位，便于契约测试。
-"""
+"""MCP 入口：优先官方 SDK；否则兼容 JSON-RPC stdio（测试 / 无依赖环境）。"""
 
 from __future__ import annotations
 
@@ -11,170 +8,137 @@ import sys
 from typing import Any
 
 from mnemosyne.core.service import ConflictError, MemoryService, NotFoundError
-from mnemosyne.domain.models import (
-    ContextBuildIn,
-    FeedbackIn,
-    MemoryProposeIn,
-    MemoryStatus,
-    MemoryType,
-    MemoryUpdateIn,
-    SearchQuery,
-)
-
-
-TOOLS = [
-    {
-        "name": "memory_search",
-        "description": "搜索相关记忆（FTS5，可降级 LIKE）",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "query": {"type": "string"},
-                "limit": {"type": "integer"},
-                "types": {"type": "array", "items": {"type": "string"}},
-            },
-            "required": ["query"],
-        },
-    },
-    {
-        "name": "memory_get",
-        "description": "获取记忆详情与证据",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "id": {"type": "string"},
-                "include_evidence": {"type": "boolean"},
-            },
-            "required": ["id"],
-        },
-    },
-    {
-        "name": "memory_context",
-        "description": "按 Token 预算组装当前对话上下文",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "query": {"type": "string"},
-                "token_budget": {"type": "integer"},
-            },
-            "required": ["query"],
-        },
-    },
-    {
-        "name": "memory_propose",
-        "description": "提交候选记忆",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "content": {"type": "string"},
-                "type": {"type": "string"},
-                "source_ids": {"type": "array", "items": {"type": "string"}},
-            },
-            "required": ["content"],
-        },
-    },
-    {
-        "name": "memory_feedback",
-        "description": "反馈记忆是否有用或有误",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "memory_id": {"type": "string"},
-                "useful": {"type": "boolean"},
-                "incorrect": {"type": "boolean"},
-                "note": {"type": "string"},
-            },
-            "required": ["memory_id"],
-        },
-    },
-    {
-        "name": "memory_update",
-        "description": "更新已有记忆（支持 expected_version）",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "id": {"type": "string"},
-                "content": {"type": "string"},
-                "status": {"type": "string"},
-                "expected_version": {"type": "integer"},
-            },
-            "required": ["id"],
-        },
-    },
-    {
-        "name": "memory_forget",
-        "description": "删除或使记忆失效",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "id": {"type": "string"},
-                "hard": {"type": "boolean"},
-            },
-            "required": ["id"],
-        },
-    },
-    {
-        "name": "memory_task_status",
-        "description": "查询后台任务",
-        "inputSchema": {
-            "type": "object",
-            "properties": {"id": {"type": "string"}},
-            "required": ["id"],
-        },
-    },
-]
-
-
-def _dispatch(service: MemoryService, name: str, args: dict[str, Any]) -> Any:
-    if name == "memory_search":
-        types = None
-        if args.get("types"):
-            types = [MemoryType(t) for t in args["types"]]
-        rows = service.search(
-            SearchQuery(query=args.get("query") or "", limit=int(args.get("limit") or 10), types=types)
-        )
-        return {"items": [m.model_dump() for m in rows]}
-    if name == "memory_get":
-        return service.get_memory(args["id"], include_evidence=bool(args.get("include_evidence")))
-    if name == "memory_context":
-        return service.build_context(
-            ContextBuildIn(query=args["query"], token_budget=args.get("token_budget"))
-        ).model_dump()
-    if name == "memory_propose":
-        return service.propose_memory(
-            MemoryProposeIn(
-                content=args["content"],
-                type=MemoryType(args["type"]) if args.get("type") else MemoryType.SEMANTIC,
-                source_ids=list(args.get("source_ids") or []),
-            )
-        ).model_dump()
-    if name == "memory_feedback":
-        return service.feedback(
-            FeedbackIn(
-                memory_id=args["memory_id"],
-                useful=args.get("useful"),
-                incorrect=args.get("incorrect"),
-                note=args.get("note") or "",
-            )
-        )
-    if name == "memory_update":
-        return service.update_memory(
-            args["id"],
-            MemoryUpdateIn(
-                content=args.get("content"),
-                status=MemoryStatus(args["status"]) if args.get("status") else None,
-                expected_version=args.get("expected_version"),
-            ),
-        ).model_dump()
-    if name == "memory_forget":
-        return service.forget_memory(args["id"], hard=bool(args.get("hard")))
-    if name == "memory_task_status":
-        return service.get_task(args["id"]).model_dump()
-    raise ValueError(f"unknown tool: {name}")
+from mnemosyne.mcp.tools import dispatch_tool, tool_specs
 
 
 def run_mcp_stdio(service: MemoryService) -> None:
-    """极简 MCP-ish JSON-RPC over stdio（兼容测试；正式可换官方 SDK）。"""
+    if _try_official_sdk(service):
+        return
+    _run_jsonrpc_fallback(service)
+
+
+def _try_official_sdk(service: MemoryService) -> bool:
+    """若已安装 mcp 包则用官方 Server；失败则回退。"""
+    try:
+        from mcp.server.fastmcp import FastMCP  # type: ignore
+    except Exception:
+        try:
+            from mcp.server import Server  # type: ignore
+            from mcp.server.stdio import stdio_server  # type: ignore
+            from mcp import types as mcp_types  # type: ignore
+        except Exception:
+            return False
+        return _run_lowlevel_sdk(service, Server, stdio_server, mcp_types)
+
+    mcp = FastMCP("mnemosyne")
+
+    @mcp.tool()
+    def memory_health() -> dict[str, Any]:
+        return dispatch_tool(service, "memory_health", {})
+
+    @mcp.tool()
+    def memory_search(query: str, limit: int = 10) -> dict[str, Any]:
+        return dispatch_tool(service, "memory_search", {"query": query, "limit": limit})
+
+    @mcp.tool()
+    def memory_get(id: str, include_evidence: bool = False) -> dict[str, Any]:
+        return dispatch_tool(
+            service, "memory_get", {"id": id, "include_evidence": include_evidence}
+        )
+
+    @mcp.tool()
+    def memory_context(query: str, token_budget: int | None = None) -> dict[str, Any]:
+        return dispatch_tool(
+            service, "memory_context", {"query": query, "token_budget": token_budget}
+        )
+
+    @mcp.tool()
+    def memory_retrieve(
+        query: str,
+        force: bool = False,
+        limit: int = 8,
+        session_id: str | None = None,
+    ) -> dict[str, Any]:
+        return dispatch_tool(
+            service,
+            "memory_retrieve",
+            {"query": query, "force": force, "limit": limit, "session_id": session_id},
+        )
+
+    @mcp.tool()
+    def memory_propose(content: str, type: str = "semantic") -> dict[str, Any]:
+        return dispatch_tool(
+            service, "memory_propose", {"content": content, "type": type}
+        )
+
+    @mcp.tool()
+    def memory_observe(content: str, source_kind: str = "dialog") -> dict[str, Any]:
+        return dispatch_tool(
+            service,
+            "memory_observe",
+            {"content": content, "source_kind": source_kind},
+        )
+
+    @mcp.tool()
+    def memory_forget(id: str, hard: bool = False) -> dict[str, Any]:
+        return dispatch_tool(service, "memory_forget", {"id": id, "hard": hard})
+
+    @mcp.tool()
+    def memory_feedback(
+        memory_id: str,
+        useful: bool | None = None,
+        incorrect: bool | None = None,
+        note: str = "",
+    ) -> dict[str, Any]:
+        return dispatch_tool(
+            service,
+            "memory_feedback",
+            {
+                "memory_id": memory_id,
+                "useful": useful,
+                "incorrect": incorrect,
+                "note": note,
+            },
+        )
+
+    mcp.run(transport="stdio")
+    return True
+
+
+def _run_lowlevel_sdk(service: MemoryService, Server: Any, stdio_server: Any, mcp_types: Any) -> bool:
+    import anyio
+
+    server = Server("mnemosyne")
+
+    @server.list_tools()
+    async def list_tools() -> list[Any]:
+        out = []
+        for t in tool_specs():
+            out.append(
+                mcp_types.Tool(
+                    name=t["name"],
+                    description=t.get("description") or "",
+                    inputSchema=t.get("inputSchema") or {"type": "object"},
+                )
+            )
+        return out
+
+    @server.call_tool()
+    async def call_tool(name: str, arguments: dict[str, Any] | None) -> list[Any]:
+        data = dispatch_tool(service, name, arguments or {})
+        text = json.dumps(data, ensure_ascii=False)
+        return [mcp_types.TextContent(type="text", text=text)]
+
+    async def _main() -> None:
+        async with stdio_server() as (read_stream, write_stream):
+            await server.run(read_stream, write_stream, server.create_initialization_options())
+
+    anyio.run(_main)
+    return True
+
+
+def _run_jsonrpc_fallback(service: MemoryService) -> None:
+    """极简 MCP-ish JSON-RPC over stdio（无官方 SDK 时使用）。"""
     for line in sys.stdin:
         line = line.strip()
         if not line:
@@ -188,16 +152,20 @@ def run_mcp_stdio(service: MemoryService) -> None:
         params = req.get("params") or {}
         try:
             if method == "tools/list":
-                result = {"tools": TOOLS}
+                result = {"tools": tool_specs()}
             elif method == "tools/call":
                 name = params.get("name")
                 arguments = params.get("arguments") or {}
-                data = _dispatch(service, name, arguments)
-                result = {"content": [{"type": "text", "text": json.dumps(data, ensure_ascii=False)}]}
+                data = dispatch_tool(service, name, arguments)
+                result = {
+                    "content": [
+                        {"type": "text", "text": json.dumps(data, ensure_ascii=False)}
+                    ]
+                }
             elif method == "initialize":
                 result = {
                     "protocolVersion": "2024-11-05",
-                    "serverInfo": {"name": "mnemosyne", "version": "0.1.0"},
+                    "serverInfo": {"name": "mnemosyne", "version": "0.3.3"},
                     "capabilities": {"tools": {}},
                 }
             else:

@@ -10,6 +10,7 @@ export class MemoryClient {
   constructor(opts) {
     this.baseUrl = String(opts.baseUrl || '').replace(/\/$/, '');
     this.token = String(opts.token || '');
+    this.componentId = String(opts.componentId || opts.component_id || 'dsh.host');
     this.timeoutMs = Number(opts.timeoutMs || 15000);
   }
 
@@ -17,13 +18,15 @@ export class MemoryClient {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), this.timeoutMs);
     try {
+      const headers = {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.token}`,
+      };
+      if (this.componentId) headers['X-Component-Id'] = this.componentId;
       const res = await fetch(`${this.baseUrl}${path}`, {
         method,
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.token}`,
-        },
+        headers,
         body: body === undefined ? undefined : JSON.stringify(body),
         signal: ctrl.signal,
       });
@@ -57,5 +60,6 @@ export class MemoryClient {
   observe(body) { return this.request('POST', '/api/v1/observations', body); }
   feedback(body) { return this.request('POST', '/api/v1/feedback', body); }
   context(body) { return this.request('POST', '/api/v1/contexts/build', body); }
+  retrieve(body) { return this.request('POST', '/api/v1/retrieve', body); }
   task(id) { return this.request('GET', `/api/v1/tasks/${encodeURIComponent(id)}`); }
 }

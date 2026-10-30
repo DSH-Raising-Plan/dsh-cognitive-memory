@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mnemosyne.local/schemas/component-contract/v1.json",
+  "title": "Mnemosyne Universal Component Contract",
+  "type": "object",
+  "required": ["component_id", "name", "version", "type", "interfaces", "protocols", "capabilities", "compatibility"],
+  "additionalProperties": false,
+  "properties": {
+    "component_id": { "type": "string", "minLength": 1, "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+    "name": { "type": "string", "minLength": 1 },
+    "version": { "type": "string", "minLength": 1 },
+    "type": {
+      "type": "string",
+      "enum": ["provider", "consumer", "adapter", "extension", "storage"]
+    },
+    "interfaces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "version"],
+        "properties": {
+          "name": { "type": "string" },
+          "version": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "protocols": {
+      "type": "array",
+      "items": { "type": "string", "enum": ["rest", "mcp", "cli", "stdio", "webhook", "pcip"] }
+    },
+    "capabilities": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "permissions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "compatibility": {
+      "type": "object",
+      "required": ["mnemosyne_api"],
+      "properties": {
+        "mnemosyne_api": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "healthcheck": {
+      "type": "object",
+      "properties": {
+        "path": { "type": "string" },
+        "method": { "type": "string", "default": "GET" }
+      }
+    }
+  }
+}

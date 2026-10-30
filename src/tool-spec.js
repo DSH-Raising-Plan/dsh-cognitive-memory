@@ -3,6 +3,7 @@
 export const SEARCH_TOOL = 'memory_search';
 export const GET_TOOL = 'memory_get';
 export const CONTEXT_TOOL = 'memory_context';
+export const RETRIEVE_TOOL = 'memory_retrieve';
 export const PROPOSE_TOOL = 'memory_propose';
 export const FEEDBACK_TOOL = 'memory_feedback';
 export const UPDATE_TOOL = 'memory_update';
@@ -55,6 +56,23 @@ export function contextToolSpec() {
       schema: { type: 'json' },
       render: (_a, v) => [{ type: 'text', text: v?.brief || JSON.stringify(v) }],
     },
+  };
+}
+
+export function retrieveToolSpec() {
+  return {
+    name: RETRIEVE_TOOL,
+    description:
+      '统一检索（Planner）：返回 FOUND/PARTIAL/NO_MATCH/FAILED/NOT_NEEDED；force 可强制检索。',
+    parameters: {
+      query: { type: 'string', required: true },
+      force: { type: 'boolean' },
+      limit: { type: 'integer' },
+      mode: { type: 'string', description: 'current|historical|any' },
+      session_id: { type: 'string', description: '可选会话隔离' },
+      token_budget: { type: 'integer' },
+    },
+    output: jsonOut(),
   };
 }
 

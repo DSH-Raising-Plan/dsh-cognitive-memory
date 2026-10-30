@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mnemosyne.local/schemas/pcip/exchange-v1.json",
+  "title": "PCIP Knowledge Exchange Request (proposal)",
+  "description": "Personal Cognitive Interoperability Protocol — project proposal, not an industry standard.",
+  "type": "object",
+  "required": ["pcip_version", "exchange_id", "level", "from_node", "to_node", "topic", "policy", "payload_ref"],
+  "additionalProperties": false,
+  "properties": {
+    "pcip_version": { "type": "string", "const": "0.1-proposal" },
+    "exchange_id": { "type": "string" },
+    "level": { "type": "string", "enum": ["L0", "L1", "L2", "L3"] },
+    "from_node": { "type": "string" },
+    "to_node": { "type": "string" },
+    "topic": { "type": "string" },
+    "policy": {
+      "type": "object",
+      "required": ["allow_store", "allow_forward", "allow_train", "expires_at"],
+      "properties": {
+        "allow_store": { "type": "boolean" },
+        "allow_forward": { "type": "boolean" },
+        "allow_train": { "type": "boolean" },
+        "expires_at": { "type": "string" },
+        "revoked": { "type": "boolean", "default": false }
+      },
+      "additionalProperties": false
+    },
+    "payload_ref": {
+      "type": "object",
+      "required": ["kind", "udm_id"],
+      "properties": {
+        "kind": { "type": "string" },
+        "udm_id": { "type": "string" },
+        "content_preview": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "provenance": { "type": "object" }
+  }
+}

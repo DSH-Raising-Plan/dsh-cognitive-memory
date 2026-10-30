@@ -5,7 +5,7 @@
 | 1 | [#17](https://github.com/DSH-Raising-Plan/dsh-mnemosyne/pull/17) — Foundation Accepted | **Accepted** | 互操作基础可用 |
 | 2 | [#18](https://github.com/DSH-Raising-Plan/dsh-mnemosyne/pull/18) — Foundation Stabilization | **Merged** | 可重复验证 / CI / 基线 |
 | 3 | P3 Foundation 1.0 | **Stabilized** | 契约基线 `foundation-0.1.0` |
-| 4 | Production Security Assessment | **Next** | 评估风险；**不预设**必须新增哪些模块 |
+| 4 | Production Security Assessment | **Report filed** | [`reports/PRODUCTION_SECURITY_GAP_REPORT.md`](./reports/PRODUCTION_SECURITY_GAP_REPORT.md)；加固 PR 待决策 |
 
 **不自动进入 P3.2。**
 

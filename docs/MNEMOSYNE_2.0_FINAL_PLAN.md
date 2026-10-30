@@ -115,6 +115,25 @@ flowchart TB
 
 外部内容永不自动升为 Active Memory；InterestSignal 晋升与完整联邦仍为 Planned。
 
+### Foundation 验收（#17）
+
+结论：**Foundation Accepted** — 剩余 Partial/Planned **不阻塞** 本阶段合并，但列为后续生产化/联邦门槛。  
+详见 [`P3_FOUNDATION_ACCEPTANCE.md`](./P3_FOUNDATION_ACCEPTANCE.md)。
+
+| 能力 | 状态 |
+| --- | --- |
+| Universal Data Model 基础 Schema | Foundation Verified |
+| Component Contract 基础校验 | Foundation Verified |
+| 外部 REST 注册与 Discovery | Foundation Verified |
+| PCIP L1/L3 基础安全边界 | Foundation Verified |
+| L3 默认拒绝、Observation 隔离 | Foundation Verified |
+| 完整 Schema 语义校验 | Partial（生产化门槛） |
+| 生产级组件身份与授权 | Partial（生产化门槛） |
+| 数据使用策略深层执法 | Planned（生产化门槛） |
+| P2P / Relay Federation | Planned（联邦门槛） |
+
+里程碑：已有不依赖 Mnemosyne 内部实现的外部组件，真实走通注册 → 发现 → 授权 → 交换 → 安全拒绝。
+
 ## 八、版本与执行顺序
 
 | 版本 | 目标 |

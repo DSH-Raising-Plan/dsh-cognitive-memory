@@ -7,6 +7,7 @@
 - Interop validators + UDM mapping; Discovery API `/api/v1/discovery`
 - PCIP stub: L3 default deny; inbound → Observation only
 - Thin SDKs: `packages/mnemosyne-sdk` (Python), `packages/mnemosyne-sdk-ts` (TS)
+- Foundation acceptance status: docs/P3_FOUNDATION_ACCEPTANCE.md (Foundation Verified; Partial/Planned = production gates)
 - Security boundary hardening (post-review): route scopes for discovery/PCIP;
   reject expired policy / `to_node` mismatch; inbound trust=`untrusted`;
   clamp self-register scopes; bootstrap register; external adapter probe

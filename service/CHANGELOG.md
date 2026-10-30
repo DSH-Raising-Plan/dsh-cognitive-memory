@@ -4,6 +4,7 @@
 
 - **Release seal:** P3 Foundation 1.0 — Stabilized (#18 CI green)
 - Next: Production Security Assessment (not auto P3.2); keep REST contracts backward-compatible
+- Docs: `ENGINEERING_CONSTRAINTS.md`, `ROADMAP_FROZEN.md`, `PRODUCTION_SECURITY_ASSESSMENT.md`
 
 - Freeze acceptance on `docs/P3_FOUNDATION_ACCEPTANCE.md`; baseline `foundation-0.1.0`
 - Independent Schema/API/PCIP versions (`schemas/VERSIONS.json`); Discovery exposes baseline

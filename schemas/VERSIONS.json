@@ -55,6 +55,8 @@
   "status": "Stabilized",
   "label": "P3 Foundation 1.0 — Stabilized",
   "stabilized_by": "PR #18",
-  "next": "Production Security Assessment (not auto P3.2)",
-  "compatibility_policy": "After Foundation 1.0 Stabilized, keep verified external REST contracts backward-compatible; production hardening may add capability or tighten remote policy but must not casually break Foundation Verified surfaces."
+  "next": "Production Security Assessment (report first; no auto P3.2)",
+  "compatibility_policy": "After Foundation 1.0 Stabilized, keep verified external REST contracts backward-compatible; production hardening may add capability or tighten remote policy but must not casually break Foundation Verified surfaces; breaking changes require explicit versioning, compat policy, and migration.",
+  "engineering_constraints": "docs/ENGINEERING_CONSTRAINTS.md",
+  "frozen_roadmap": "docs/ROADMAP_FROZEN.md"
 }

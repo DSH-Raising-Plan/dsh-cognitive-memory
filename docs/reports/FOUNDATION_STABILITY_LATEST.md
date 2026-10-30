@@ -85,4 +85,5 @@ See [`FOUNDATION_KNOWN_LIMITS.md`](../FOUNDATION_KNOWN_LIMITS.md).
 ## Next
 
 Production Security Assessment — do **not** auto-start P3.2.  
-Keep Foundation Verified REST contracts backward-compatible.
+Constraints: [`ENGINEERING_CONSTRAINTS.md`](../ENGINEERING_CONSTRAINTS.md)  
+Frozen roadmap: [`ROADMAP_FROZEN.md`](../ROADMAP_FROZEN.md)

@@ -7,8 +7,10 @@
 > CI：`plugin` + `service` + `foundation-stabilization` 全绿  
 > 证据：外部 REST 组件 `examples/external-weather-adapter` → `scripts/run_external_interop_probe.py` **12/12 PASS**
 
-> **下一阶段不自动进入 P3.2。** 先做 **Production Security Assessment**，再按真实接入需求排优先级。  
-> 原则：Foundation 稳定后尽量保持向后兼容；生产加固可增加能力/收紧远程策略，但不得随意破坏已验证的外部 REST 契约。
+> **下一阶段不自动进入 P3.2。** 先做 **Production Security Assessment**（报告优先、不急开 PR）。  
+> 开发约束：[`ENGINEERING_CONSTRAINTS.md`](./ENGINEERING_CONSTRAINTS.md)  
+> 冻结路线：[`ROADMAP_FROZEN.md`](./ROADMAP_FROZEN.md)  
+> 评估框架：[`PRODUCTION_SECURITY_ASSESSMENT.md`](./PRODUCTION_SECURITY_ASSESSMENT.md)
 
 ## 状态约定
 

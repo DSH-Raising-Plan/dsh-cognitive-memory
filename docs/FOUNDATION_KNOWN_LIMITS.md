@@ -1,6 +1,7 @@
 # Foundation 已知限制清单（稳定基线）
 
-与 [`P3_FOUNDATION_ACCEPTANCE.md`](./P3_FOUNDATION_ACCEPTANCE.md) 中 Partial / Planned 对齐；**不是** Foundation 否决项。
+与 [`P3_FOUNDATION_ACCEPTANCE.md`](./P3_FOUNDATION_ACCEPTANCE.md) 中 Partial / Planned 对齐；**不是** Foundation 否决项。  
+排序与是否加固：见 [`PRODUCTION_SECURITY_ASSESSMENT.md`](./PRODUCTION_SECURITY_ASSESSMENT.md)。开发约束：[`ENGINEERING_CONSTRAINTS.md`](./ENGINEERING_CONSTRAINTS.md)。
 
 | ID | 限制 | 状态 | 备注 |
 | --- | --- | --- | --- |

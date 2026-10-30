@@ -4,7 +4,8 @@
 > 验收冻结：[`P3_FOUNDATION_ACCEPTANCE.md`](./P3_FOUNDATION_ACCEPTANCE.md)  
 > 稳定化：[`P3.1_FOUNDATION_STABILIZATION.md`](./P3.1_FOUNDATION_STABILIZATION.md)  
 > 已知限制：[`FOUNDATION_KNOWN_LIMITS.md`](./FOUNDATION_KNOWN_LIMITS.md)  
-> 下一站：Production Security Assessment（非自动 P3.2）；保持外部 REST 契约向后兼容。
+> 下一站：Production Security Assessment（非自动 P3.2）。  
+> 约束：[`ENGINEERING_CONSTRAINTS.md`](./ENGINEERING_CONSTRAINTS.md) · 路线：[`ROADMAP_FROZEN.md`](./ROADMAP_FROZEN.md)
 
 ```
 DSH / Agent / App / Plugin / Service

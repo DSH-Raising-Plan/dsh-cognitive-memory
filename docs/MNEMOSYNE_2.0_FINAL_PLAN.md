@@ -2,7 +2,8 @@
 
 > 基线：`feat/mnemosyne-2.0-p0-p1` · PR [#13](https://github.com/DSH-Raising-Plan/dsh-mnemosyne/pull/13) · `9295d03`  
 > 状态标注约定：`Implemented` / `Partial` / `Planned`（见各文档页眉）。  
-> **当前执行重点：阶段 4 · Universal Ecosystem 基础**（分支 `feat/mnemosyne-2.0-p3-ecosystem`；P2 见 PR #16）。P2P/Relay 仍为 Planned。
+> **路线已冻结：** [#17](https://github.com/DSH-Raising-Plan/dsh-mnemosyne/pull/17) Accepted → [#18](https://github.com/DSH-Raising-Plan/dsh-mnemosyne/pull/18) Merged → **P3 Foundation 1.0 Stabilized** → **Production Security Assessment（Next）**。  
+> 不自动开 P3.2。约束：[`ENGINEERING_CONSTRAINTS.md`](./ENGINEERING_CONSTRAINTS.md)；路线：[`ROADMAP_FROZEN.md`](./ROADMAP_FROZEN.md)。
 
 ## 一、结论
 

@@ -12,6 +12,8 @@ from typing import Any
 from mnemosyne.domain.models import (
     ContextBuildIn,
     ContextBuildOut,
+    Evidence,
+    EvidenceIn,
     FeedbackIn,
     Memory,
     MemoryProposeIn,
@@ -20,6 +22,8 @@ from mnemosyne.domain.models import (
     MemoryUpdateIn,
     Observation,
     ObservationIn,
+    ObservationStatus,
+    RelationKind,
     SearchQuery,
     Task,
     TaskCreateIn,
@@ -99,6 +103,7 @@ class MemoryService:
     # ---------- helpers ----------
 
     def _row_memory(self, row: sqlite3.Row) -> Memory:
+        keys = set(row.keys())
         return Memory(
             id=row["id"],
             type=MemoryType(row["type"]),
@@ -111,6 +116,9 @@ class MemoryService:
             version=int(row["version"]),
             confidence=row["confidence"],
             expires_at=row["expires_at"],
+            event_time=row["event_time"] if "event_time" in keys else None,
+            valid_from=row["valid_from"] if "valid_from" in keys else None,
+            valid_until=row["valid_until"] if "valid_until" in keys else None,
             metadata=_loads(row["metadata_json"], {}),
         )
 
@@ -200,11 +208,73 @@ class MemoryService:
 
     def _fts_upsert(self, conn: sqlite3.Connection, mem: Memory) -> None:
         conn.execute("DELETE FROM memories_fts WHERE memory_id=?", (mem.id,))
-        if mem.status == MemoryStatus.INVALIDATED:
+        if mem.status in (MemoryStatus.INVALIDATED, MemoryStatus.ARCHIVED):
             return
         conn.execute(
             "INSERT INTO memories_fts(memory_id, content, type, status) VALUES (?, ?, ?, ?)",
             (mem.id, mem.content, mem.type.value, mem.status.value),
+        )
+
+    def _insert_evidence_conn(
+        self,
+        conn: sqlite3.Connection,
+        body: EvidenceIn,
+    ) -> Evidence:
+        eid = new_id("evd")
+        now = _now()
+        et = body.evidence_type.value if isinstance(body.evidence_type, RelationKind) else str(body.evidence_type)
+        conn.execute(
+            """
+            INSERT OR IGNORE INTO evidences(
+              id, subject_kind, subject_id, source_type, source_id, evidence_type,
+              content_ref, confidence, observed_at, recorded_at, provenance_json, metadata_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                eid,
+                body.subject_kind,
+                body.subject_id,
+                body.source_type,
+                body.source_id,
+                et,
+                body.content_ref,
+                body.confidence,
+                body.observed_at or now,
+                now,
+                json.dumps(body.provenance, ensure_ascii=False),
+                json.dumps(body.metadata, ensure_ascii=False),
+            ),
+        )
+        # 兼容旧表：memory + observation
+        if body.subject_kind == "memory" and body.source_type == "observation":
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO memory_evidence(memory_id, observation_id, relation, note, created_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (body.subject_id, body.source_id, et, "", now),
+            )
+        row = conn.execute(
+            """
+            SELECT id FROM evidences
+            WHERE subject_kind=? AND subject_id=? AND source_type=? AND source_id=? AND evidence_type=?
+            """,
+            (body.subject_kind, body.subject_id, body.source_type, body.source_id, et),
+        ).fetchone()
+        real_id = row["id"] if row else eid
+        return Evidence(
+            id=real_id,
+            recorded_at=now,
+            subject_kind=body.subject_kind,
+            subject_id=body.subject_id,
+            source_type=body.source_type,
+            source_id=body.source_id,
+            evidence_type=RelationKind(et) if et in RelationKind._value2member_map_ else RelationKind.SUPPORTS,
+            content_ref=body.content_ref,
+            confidence=body.confidence,
+            observed_at=body.observed_at or now,
+            provenance=body.provenance,
+            metadata=body.metadata,
         )
 
     # ---------- observations ----------
@@ -216,12 +286,13 @@ class MemoryService:
                 return Observation.model_validate(cached)
             oid = new_id("obs")
             now = _now()
+            status = ObservationStatus.OBSERVED
             conn.execute(
                 """
                 INSERT INTO observations(
                   id, source_kind, content, occurred_at, created_at, producer,
-                  correlation_id, data_ref, metadata_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                  correlation_id, data_ref, metadata_json, status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     oid,
@@ -233,9 +304,15 @@ class MemoryService:
                     body.correlation_id,
                     body.data_ref,
                     json.dumps(body.metadata, ensure_ascii=False),
+                    status.value,
                 ),
             )
-            obs = Observation(id=oid, created_at=now, **body.model_dump(exclude={"idempotency_key"}))
+            obs = Observation(
+                id=oid,
+                created_at=now,
+                status=status,
+                **body.model_dump(exclude={"idempotency_key"}),
+            )
             self._emit(
                 conn,
                 "observation.captured",
@@ -278,6 +355,101 @@ class MemoryService:
             self._idempotent_put(conn, body.idempotency_key, "observation", payload)
             return obs
 
+    def get_observation(self, observation_id: str) -> dict[str, Any] | None:
+        row = self.db.connect().execute(
+            "SELECT * FROM observations WHERE id=?", (observation_id,)
+        ).fetchone()
+        if not row:
+            return None
+        keys = set(row.keys())
+        return {
+            "id": row["id"],
+            "source_kind": row["source_kind"],
+            "content": row["content"],
+            "occurred_at": row["occurred_at"],
+            "created_at": row["created_at"],
+            "producer": row["producer"],
+            "correlation_id": row["correlation_id"],
+            "data_ref": row["data_ref"],
+            "metadata": _loads(row["metadata_json"], {}),
+            "status": row["status"] if "status" in keys else ObservationStatus.OBSERVED.value,
+        }
+
+    def set_observation_status(self, observation_id: str, status: ObservationStatus | str) -> dict[str, Any]:
+        st = status.value if isinstance(status, ObservationStatus) else str(status)
+        with self.db.transaction() as conn:
+            row = conn.execute(
+                "SELECT id FROM observations WHERE id=?", (observation_id,)
+            ).fetchone()
+            if not row:
+                raise NotFoundError(f"observation not found: {observation_id}")
+            conn.execute(
+                "UPDATE observations SET status=? WHERE id=?",
+                (st, observation_id),
+            )
+        out = self.get_observation(observation_id) or {}
+        return out
+
+    def add_evidence(self, body: EvidenceIn) -> Evidence:
+        with self.db.transaction() as conn:
+            ev = self._insert_evidence_conn(conn, body)
+            self._emit(
+                conn,
+                "evidence.added",
+                {
+                    "evidence_id": ev.id,
+                    "subject_id": body.subject_id,
+                    "evidence_type": ev.evidence_type.value,
+                },
+            )
+            return ev
+
+    def list_evidence(
+        self,
+        *,
+        subject_kind: str = "memory",
+        subject_id: str,
+        evidence_type: str | None = None,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        lim = max(1, min(500, int(limit or 100)))
+        conn = self.db.connect()
+        sql = "SELECT * FROM evidences WHERE subject_kind=? AND subject_id=?"
+        args: list[Any] = [subject_kind, subject_id]
+        if evidence_type:
+            sql += " AND evidence_type=?"
+            args.append(evidence_type)
+        sql += " ORDER BY recorded_at DESC LIMIT ?"
+        args.append(lim)
+        try:
+            rows = conn.execute(sql, tuple(args)).fetchall()
+        except sqlite3.OperationalError:
+            return []
+        out: list[dict[str, Any]] = []
+        for r in rows:
+            out.append(
+                {
+                    "id": r["id"],
+                    "subject_kind": r["subject_kind"],
+                    "subject_id": r["subject_id"],
+                    "source_type": r["source_type"],
+                    "source_id": r["source_id"],
+                    "evidence_type": r["evidence_type"],
+                    "content_ref": r["content_ref"],
+                    "confidence": r["confidence"],
+                    "observed_at": r["observed_at"],
+                    "recorded_at": r["recorded_at"],
+                    "provenance": _loads(r["provenance_json"], {}),
+                    "metadata": _loads(r["metadata_json"], {}),
+                }
+            )
+        return out
+
+    def list_decision_logs(self, *, subject_id: str | None = None, limit: int = 40) -> list[dict[str, Any]]:
+        from mnemosyne.cognition.decision_log import list_decisions
+
+        return list_decisions(self.db, subject_id=subject_id, limit=limit)
+
     # ---------- memories ----------
 
     def _insert_memory(self, conn: sqlite3.Connection, mem: Memory) -> None:
@@ -285,8 +457,9 @@ class MemoryService:
             """
             INSERT INTO memories(
               id, type, status, content, source_ids_json, created_at, updated_at,
-              last_confirmed_at, version, confidence, expires_at, metadata_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              last_confirmed_at, version, confidence, expires_at, metadata_json,
+              event_time, valid_from, valid_until
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 mem.id,
@@ -301,17 +474,23 @@ class MemoryService:
                 mem.confidence,
                 mem.expires_at,
                 json.dumps(mem.metadata, ensure_ascii=False),
+                mem.event_time,
+                mem.valid_from,
+                mem.valid_until,
             ),
         )
         self._snapshot_version(conn, mem)
         self._fts_upsert(conn, mem)
         for sid in mem.source_ids:
-            conn.execute(
-                """
-                INSERT OR IGNORE INTO memory_evidence(memory_id, observation_id, relation, note, created_at)
-                VALUES (?, ?, 'supports', '', ?)
-                """,
-                (mem.id, sid, _now()),
+            self._insert_evidence_conn(
+                conn,
+                EvidenceIn(
+                    subject_kind="memory",
+                    subject_id=mem.id,
+                    source_type="observation",
+                    source_id=sid,
+                    evidence_type=RelationKind.SUPPORTS,
+                ),
             )
 
     def propose_memory(self, body: MemoryProposeIn) -> Memory:
@@ -333,6 +512,9 @@ class MemoryService:
                 version=1,
                 confidence=body.confidence,
                 expires_at=body.expires_at,
+                event_time=body.event_time,
+                valid_from=body.valid_from,
+                valid_until=body.valid_until,
                 metadata=body.metadata,
             )
             self._insert_memory(conn, mem)
@@ -396,6 +578,12 @@ class MemoryService:
                 mem.confidence = body.confidence
             if body.expires_at is not None:
                 mem.expires_at = body.expires_at
+            if body.event_time is not None:
+                mem.event_time = body.event_time
+            if body.valid_from is not None:
+                mem.valid_from = body.valid_from
+            if body.valid_until is not None:
+                mem.valid_until = body.valid_until
             mem.version += 1
             mem.updated_at = _now()
             if mem.status == MemoryStatus.ACTIVE:
@@ -404,6 +592,7 @@ class MemoryService:
                 """
                 UPDATE memories SET
                   content=?, status=?, metadata_json=?, confidence=?, expires_at=?,
+                  event_time=?, valid_from=?, valid_until=?,
                   version=?, updated_at=?, last_confirmed_at=?
                 WHERE id=?
                 """,
@@ -413,6 +602,9 @@ class MemoryService:
                     json.dumps(mem.metadata, ensure_ascii=False),
                     mem.confidence,
                     mem.expires_at,
+                    mem.event_time,
+                    mem.valid_from,
+                    mem.valid_until,
                     mem.version,
                     mem.updated_at,
                     mem.last_confirmed_at,
@@ -502,6 +694,13 @@ class MemoryService:
         conn.execute("DELETE FROM memories_fts WHERE memory_id=?", (memory_id,))
         conn.execute("DELETE FROM memory_evidence WHERE memory_id=?", (memory_id,))
         conn.execute("DELETE FROM memory_feedback WHERE memory_id=?", (memory_id,))
+        try:
+            conn.execute(
+                "DELETE FROM evidences WHERE subject_kind='memory' AND subject_id=?",
+                (memory_id,),
+            )
+        except sqlite3.OperationalError:
+            pass
         conn.execute(
             "DELETE FROM memory_relations WHERE from_id=? OR to_id=?",
             (memory_id, memory_id),

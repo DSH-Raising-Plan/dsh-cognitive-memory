@@ -17,9 +17,29 @@ class MemoryType(str, Enum):
 
 
 class MemoryStatus(str, Enum):
+    """Memory 生命周期（与 Observation 分离；decayed 为策略属性非状态）。"""
+
     CANDIDATE = "candidate"
+    NEEDS_REVIEW = "needs_review"
     ACTIVE = "active"
     SUPERSEDED = "superseded"
+    INVALIDATED = "invalidated"
+    ARCHIVED = "archived"
+
+
+class ObservationStatus(str, Enum):
+    OBSERVED = "observed"
+    PROCESSED = "processed"
+    REJECTED = "rejected"
+    DELETED = "deleted"
+
+
+class EpisodeStatus(str, Enum):
+    """情节生命周期；当前以 type=episodic 的 Memory 承载。"""
+
+    COLLECTING = "collecting"
+    CONSOLIDATED = "consolidated"
+    ARCHIVED = "archived"
     INVALIDATED = "invalidated"
 
 
@@ -37,6 +57,7 @@ class RelationKind(str, Enum):
     CONTRADICTS = "contradicts"
     DERIVES = "derives"
     SUPERSEDES = "supersedes"
+    DUPLICATES = "duplicates"
 
 
 class ObservationIn(BaseModel):
@@ -53,6 +74,7 @@ class ObservationIn(BaseModel):
 class Observation(ObservationIn):
     id: str
     created_at: str
+    status: ObservationStatus = ObservationStatus.OBSERVED
 
 
 class MemoryProposeIn(BaseModel):
@@ -63,6 +85,9 @@ class MemoryProposeIn(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
     confidence: float | None = None
     expires_at: str | None = None
+    event_time: str | None = None
+    valid_from: str | None = None
+    valid_until: str | None = None
     idempotency_key: str | None = None
 
 
@@ -72,6 +97,9 @@ class MemoryUpdateIn(BaseModel):
     metadata: dict[str, Any] | None = None
     confidence: float | None = None
     expires_at: str | None = None
+    event_time: str | None = None
+    valid_from: str | None = None
+    valid_until: str | None = None
     expected_version: int | None = None
 
 
@@ -87,6 +115,9 @@ class Memory(BaseModel):
     version: int = 1
     confidence: float | None = None
     expires_at: str | None = None
+    event_time: str | None = None
+    valid_from: str | None = None
+    valid_until: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -95,6 +126,24 @@ class EvidenceLink(BaseModel):
     observation_id: str
     relation: RelationKind = RelationKind.SUPPORTS
     note: str = ""
+
+
+class EvidenceIn(BaseModel):
+    subject_kind: str = "memory"
+    subject_id: str
+    source_type: str = "observation"
+    source_id: str
+    evidence_type: RelationKind = RelationKind.SUPPORTS
+    content_ref: str | None = None
+    confidence: float | None = None
+    observed_at: str | None = None
+    provenance: dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class Evidence(EvidenceIn):
+    id: str
+    recorded_at: str
 
 
 class FeedbackIn(BaseModel):

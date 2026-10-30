@@ -7,17 +7,18 @@
 
 本文定义：**对象模型、状态、转移条件、证据类型、冲突与衰减、决策日志、验收测试**。阈值与权重字段均为**可配置默认值**，须用实验校准，不得当作心理学常数。
 
-### 与代码差距（必读）
+### 与代码差距（必读 · 随 P1 更新）
 
-| 规格（本文） | 代码现状（PR #13） | 标注 |
+| 规格（本文） | 代码现状 | 标注 |
 | --- | --- | --- |
-| Observation / Episode / Memory 多状态 | `MemoryStatus` 仅 `candidate\|active\|superseded\|invalidated` | Planned |
-| OBSERVED→…→ACTIVE 全链 | 对话观察可直接写 working+ACTIVE；consolidate→candidate；promote≈证据条数≥2 | Partial |
-| 证据分层 + 反证影响晋升 | `memory_evidence` 默认 supports；schema accommodate 有 counter；晋升不读反证 | Partial |
-| Decision Log / 兴趣态机 | 未实现 | Planned |
-| 删除观察级联派生 | P0 Safety Hardening 进行中 | Partial |
+| Observation / Episode / Memory 分生命周期 | `ObservationStatus` + `MemoryStatus`（含 needs_review/archived）；Episode 枚举已定义，情节仍以 `type=episodic` Memory 承载 | Partial |
+| 证据独立实体 + 反证影响晋升 | `evidences` 表 + API；`promote_v2` 读反证与来源独立性 | Implemented（规则版） |
+| Decision Log | `decision_logs` + `/decisions` | Implemented |
+| 兴趣专用态机 / InterestSignal | 表 `interest_signals` 已建；晋升规则未完整接入 | Partial |
+| Events vs Tasks | 见 [EVENTS_TASKS_CONTRACT.md](./EVENTS_TASKS_CONTRACT.md)：Tasks=业务执行 | Implemented（契约） |
+| 删除观察级联派生 | P0 Safety Hardening | Implemented |
 
-完整状态机落地排在 **阶段 2 · P1 Cognitive Correctness**（方案：三生命周期，勿把所有阶段塞进单一 MemoryStatus）。
+完整心理学门槛校准与兴趣态机仍属后续实验；本文其余章节多为 **Planned 规格**，实现以代码与 OpenAPI 为准。
 
 ---
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.2 — P1 Cognitive Correctness
+
+- `ObservationStatus` / `MemoryStatus`（needs_review、archived）分生命周期；时间字段 event_time/valid_*
+- `evidences` + `decision_logs` + `interest_signals` 迁移 `003_cognitive_correctness`
+- Evidence REST：`POST /evidences`、`GET /memories/{id}/evidences`
+- `promote_v2`：独立来源门槛 + 反证 → needs_review；Decision Log；`POST .../promote-check`
+- 契约文档 `docs/EVENTS_TASKS_CONTRACT.md`（Tasks=业务执行）
+
 ## 0.3.1 — P0 Safety Hardening
 
 - 进程锁：`storage/process_lock.py`（同 `data_dir` 独占；OS 文件锁）

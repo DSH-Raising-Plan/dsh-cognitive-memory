@@ -1,7 +1,8 @@
 # Provider Contract（草案）
 
-> **轨 B / Workstream 3** · 分支建议：`research/provider-adapters`  
-> Adapter **正式实现**须等 [`MEMORY_INTERCHANGE_MODEL.md`](../architecture/MEMORY_INTERCHANGE_MODEL.md) 稳定。
+> **轨 B / Workstream 3** · 分支：`research/provider-adapters`  
+> Interchange **已冻结** [`MEMORY_INTERCHANGE_MODEL.md`](../architecture/MEMORY_INTERCHANGE_MODEL.md) `0.1`。  
+> Adapter **正式实现**仍属未来 `2.1`；本轨仅契约 + 样例映射。
 
 ## 数据流（统一）
 

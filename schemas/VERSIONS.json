@@ -55,7 +55,7 @@
   "status": "Stabilized",
   "label": "P3 Foundation 1.0 — Stabilized",
   "stabilized_by": "PR #18",
-  "next": "Dual-track: Track A Foundation maintenance; Track B Migration & Adoption design (no 2.1 impl yet). Hardening Deferred; P3.2 Not Started.",
+  "next": "Dual-track: Track A Foundation maintenance; Track B Migration & Adoption design ACCEPTED (impl Deferred — no 2.1 yet). Hardening Deferred; P3.2 Not Started.",
   "compatibility_policy": "After Foundation 1.0 Stabilized, keep verified external REST contracts backward-compatible; production hardening may add capability or tighten remote policy but must not casually break Foundation Verified surfaces; breaking changes require explicit versioning, compat policy, and migration. Track B must not mutate foundation-0.1.0 contracts.",
   "engineering_constraints": "docs/ENGINEERING_CONSTRAINTS.md",
   "frozen_roadmap": "docs/ROADMAP_FROZEN.md",
@@ -66,12 +66,13 @@
     "production_hardening": "Deferred",
     "p3_2": "Not Started",
     "track_a_foundation_maintenance": "Current",
-    "track_b_migration_adoption_design": "Started"
+    "track_b_migration_adoption_design": "Accepted"
   },
   "design_tracks": {
     "memory-interchange": {
-      "version": "0.1-draft",
-      "path": "memory-interchange/v0.1-draft.json",
+      "version": "0.1",
+      "path": "memory-interchange/v0.1.json",
+      "status": "design-frozen",
       "note": "Not part of foundation-0.1.0; separate from UDM and Component Contract"
     }
   },

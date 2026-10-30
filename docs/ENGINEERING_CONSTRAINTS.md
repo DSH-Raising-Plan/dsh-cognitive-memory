@@ -2,7 +2,7 @@
 
 > 生效自：**P3 Foundation 1.0 — Stabilized**（#18）  
 > 工程分界：**Foundation 负责稳定；后续演进负责增强。两者不得混为一谈。**  
-> 当前工程阶段：**双轨并行** — 轨 A 稳定基线维护；轨 B Migration & Adoption **仅设计/验证**（见 [`plans/MEMORY_MIGRATION_PARALLEL_PLAN.md`](./plans/MEMORY_MIGRATION_PARALLEL_PLAN.md)）
+> 当前工程阶段：**双轨并行** — 轨 A 稳定基线维护；轨 B Migration & Adoption **设计已 Accepted**（实现 Deferred；见 [`plans/MEMORY_MIGRATION_PARALLEL_PLAN.md`](./plans/MEMORY_MIGRATION_PARALLEL_PLAN.md)）
 
 ## 三条安全原则（持续约束后续实现）
 
@@ -45,7 +45,7 @@
 | --- | --- |
 | Foundation（已稳定） | 可维护、可复现的互操作基线；契约冻结 |
 | 轨 A 维护（当前） | 修阻塞复现/兼容的缺陷；CI / 安全边界不退化；不扩生态能力 |
-| 轨 B 设计（当前） | 文档 / Schema 草案 / Provider 映射验证；独立验收前不进主开发 |
+| 轨 B 设计（已 Accepted） | MIM 0.1 + 迁移/Adoption 设计 + 四类 Provider 映射；`2.1` 实现须另开决策 |
 | 后续演进 | 仅在触发条件 + 评估结论（含轨 B 退出条件）驱动下增强 |
 
 ## 何时重新打开「生产安全加固」决策

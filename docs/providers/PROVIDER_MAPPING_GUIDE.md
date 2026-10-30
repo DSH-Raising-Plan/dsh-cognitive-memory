@@ -70,8 +70,11 @@
 
 ## 验证检查表（每个 Provider）
 
-- [ ] 样例源数据  
-- [ ] 映射表无歧义时间语义  
-- [ ] 产出合法 MIM Bundle（对照 schema draft）  
-- [ ] provenance 可追溯到源  
-- [ ] 未引入与 MIM 冲突的私有必填字段  
+| Provider | 样例 | 时间语义 | MIM 0.1 | provenance | 无冲突私有必填 |
+| --- | --- | --- | --- | --- | --- |
+| JSON | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Markdown | ✓ | ✓ | ✓ | ✓ | ✓ |
+| SQLite | ✓ + table_map | ✓ | ✓ + relations | ✓ | ✓ |
+| Mem0 | ✓ fixture | ✓ | ✓ + identity_keys | ✓ | ✓ |
+
+统一校验：`python scripts/validate_mim_samples.py`  

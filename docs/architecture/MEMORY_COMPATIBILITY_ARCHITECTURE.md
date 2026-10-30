@@ -1,7 +1,7 @@
-# Memory Compatibility Architecture（草案）
+# Memory Compatibility Architecture
 
-> **轨 B / Adoption 配套** · 回答「原有 Agent 如何继续用记忆」。  
-> **暂缓实现**完整 Compatibility Gateway；本文只定边界与评估清单。
+> **轨 B / Adoption 配套 · 设计边界已定；Gateway 实现暂缓**  
+> 回答「原有 Agent 如何继续用记忆」。完整 Compatibility Gateway **不在**本设计轨交付范围。
 
 ## 目标
 
@@ -23,6 +23,8 @@ Compatibility Facade（设计中；非现网）
 Mnemosyne Service Contract（不变）
 ```
 
+与 Adoption 阶段对齐：Facade 最早服务于 **Bridged**；**Adopted** 后写策略收紧到 Mnemosyne。
+
 ## 评估清单（进入实现前）
 
 - [ ] 目标 Provider/Agent 的 API 语义是否文档化  
@@ -39,4 +41,4 @@ Mnemosyne Service Contract（不变）
 
 ## 第二批候选
 
-Zep / Graphiti、Letta 等 — **首批管线稳定后再评估** Adapter + Facade 语义。
+Zep / Graphiti、Letta 等 — 迁移引擎实现稳定后再评估 Adapter + Facade 语义。

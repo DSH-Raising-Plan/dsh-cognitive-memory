@@ -1,5 +1,7 @@
-# SQLite provider sample（占位）
+# SQLite provider sample
 
-待 `research/provider-adapters`：提供最小 `.sqlite` 与 table→field 映射声明，再产出 `mapped.mim.json`。
+- `sample.sqlite` — 由 `python scripts/build_sqlite_sample.py` 生成  
+- `table_map.json` — 显式 table→field 映射（禁止隐式猜列）  
+- `mapped.mim.json` — MIM `0.1` Bundle（含 `relations`）
 
-要求：用户指定 DB 路径；禁止自动全盘扫描。
+用户须明确指定 DB 路径；禁止自动全盘扫描。
